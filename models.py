@@ -1,4 +1,5 @@
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy.sql import expression
 db = SQLAlchemy()
 
 class User(db.Model):
@@ -28,6 +29,110 @@ class User(db.Model):
             "role_id": self.role_id,
         }
 
+
+
+       # EJEMPLO !!!!!!! 
+#   _________________________________________________________________________________________
+
+class Person(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(50), nullable=False)
+    addresses = db.relationship('Address', backref='person', lazy=True)
+
+class Address(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    email = db.Column(db.String(120), nullable=False)
+    person_id = db.Column(db.Integer, db.ForeignKey('person.id'), nullable=False)
+
+#   ______________________________________________________________________________________
+
+
+class Quiz(db.Model):
+    __tablename__= "quiz"
+    id = db.Column(db.Integer, primary_key=True)
+    titulo = db.Column(db.String(120), nullable=True, unique=True)
+    preguntas = db.relationship("Pregunta", backref=("quiz"), lazy=True)
+
+    def serialize(self):
+        return {
+            "id": self.id,
+            "titulo": self.titulo,
+        }
+
+    def guardar(self):
+        db.session.add(self)
+        db.session.commit()
+    
+    def actualizar(self):
+        db.session.commit()
+
+    def borrar(self):
+        db.session.delete(self)
+        db.session.commit()
+
+class Pregunta(db.Model):
+    __tablename__= "preguntas"
+    id = db.Column(db.Integer, primary_key=True)
+    quiz_id = db.Column(db.Integer, db.ForeignKey("quiz.id"), nullable=False)
+    pregunta = db.Column(db.String(120), nullable=True, unique=True)
+    respuestas = db.relationship("Respuesta", backref="preguntas", lazy=True)
+
+    def serialize(self):
+        return {
+            "id": self.id,
+            "pregunta": self.pregunta,
+            "quiz": {
+                "id": self.quiz.id,
+                "titulo": self.quiz.titulo
+            }
+        }
+  
+    def guardar(self):
+        db.session.add(self)
+        db.session.commit()
+
+    def actualizar(self):
+        db.session.commit()
+    
+    def borrar(self):
+        db.session.delete(self)
+        db.session.commit()
+
+class Respuesta(db.Model):
+    __tablename__= "respuestas"
+    id = db.Column(db.Integer, primary_key=True)
+    pregunta_id = db.Column(db.Integer, db.ForeignKey("preguntas.id"), nullable=False)
+    contenido = db.Column(db.String(120), nullable=True)
+    opcion = db.Column(db.String(120), nullable=False)
+
+    def serialize(self):
+        return {
+            "id": self.id,
+            "contenido": self.contenido,
+            "opcion": self.opcion,
+            "pregunta": {
+                "id": self.preguntas.id,
+                "pregunta": self.preguntas.pregunta,
+                "quiz": {
+                    "id": self.preguntas.quiz.id,
+                    "titulo": self.preguntas.quiz.titulo
+                }
+            }
+        }
+
+    def guardar(self):
+        db.session.add(self)
+        db.session.commit()
+
+    def actualizar(self):
+        db.session.commit()
+
+    def borrar(self):
+        db.session.delete(self)
+        db.session.commit()
+
+
+""" 
 class Curso(db.Model):
     __tablename__= "curso"
     id = db.Column(db.Integer, primary_key=True)
@@ -69,28 +174,11 @@ class Ranking(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     puntaje = db.Column(db.String(120), nullable=True)
 
-class Quiz(db.Model):
-    __tablename__= "quiz"
-    id = db.Column(db.Integer, primary_key=True)
-    curso_id = db.Column(db.Integer, nullable=True)
-    preguntas = db.Column(db.String(120), nullable=True)
-
-class Respuestas_Quiz(db.Model):
-    __tablename__= "respuestas_quiz"
-    id = db.Column(db.Integer, primary_key=True)
-    respuestas_correctas = db.Column(db.String(120), nullable=True)
-    pregunta_id = db.Column(db.String(120), nullable=True)
-
-class Preguntas_Quiz(db.Model):
-    __tablename__= "preguntas_quiz"
-    id = db.Column(db.Integer, primary_key=True)
-    enunciado = db.Column(db.String(120), nullable=True)
-
 class Respuestas_Usuario(db.Model):
     __tablename__= "respuestas_usuario"
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.String(120), nullable=True)
     pregunta_id = db.Column(db.String(120), nullable=True)
-    respuesta_usuario = db.Column(db.String(120), nullable=True)
+    respuesta_usuario = db.Column(db.String(120), nullable=True) """
 
 

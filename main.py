@@ -5,7 +5,7 @@ from flask_migrate import Migrate, MigrateCommand
 from flask_cors import CORS
 from flask_bcrypt import Bcrypt
 from flask_jwt_extended import JWTManager, get_jwt_identity, jwt_required, create_access_token
-from models import db, User
+from models import db, User, Person, Address, Pregunta, Respuesta, Quiz
 
 app = Flask(__name__)
 app.url_map.strict_slashes = False
@@ -39,6 +39,8 @@ def my_expired_token_callback(expired_token):
 def main():
     return render_template("index.html")
 
+# .......................... LOGIN ....................................... 
+# _____________________________________________________________________________________________________________________________________________
 @app.route('/api/login', methods=['POST'])
 def login():
     username = request.json.get("username", None)
@@ -67,6 +69,8 @@ def login():
 
     return jsonify(data), 200
 
+# .......................... REGISTER ....................................... 
+# _____________________________________________________________________________________________________________________________________________    
 @app.route('/api/register', methods=['POST'])
 def register():
     username = request.json.get("username", None)
@@ -127,18 +131,148 @@ def register():
 
     return jsonify({"msg": "registro existo, por favor hacer login"}), 201
 
-
+# .......................... USERS ....................................... 
+# _____________________________________________________________________________________________________________________________________________
 @app.route("/api/users", methods=['GET', 'POST'])
 @jwt_required
 def users():
     pass
-
+# .......................... PROFILE ....................................... 
+# _____________________________________________________________________________________________________________________________________________
 @app.route('/api/profile')
 @jwt_required
 def profile():
     username = get_jwt_identity()
     user = User.query.filter_by( username=username ).first()
     return jsonify({"msg": f"Perfil del usuario {username}", "user": user.serialize()}), 200
+
+# ..................... AGREGAR TITULO AL QUIZ ....................................... 
+# _____________________________________________________________________________________________________________________________________________
+@app.route('/api/add_titulo_quiz', methods=['POST'])
+def add_titulo_quiz():
+    titulo = request.json.get("titulo", None)
+
+    if not titulo:
+       return jsonify({"msg": "titulo is required"}), 400
+
+    
+    quiz = Quiz.query.filter_by(titulo=titulo).first()
+
+    if quiz:
+        return jsonify({"msg": "Titulo already exists"}), 400
+
+    
+    quiz = Quiz()
+    quiz.titulo = titulo
+    
+    quiz.guardar()
+
+    return jsonify(quiz.serialize()), 201
+
+# .......................... REGRESAR EL TITULO DEL QUIZ ....................................... 
+# _____________________________________________________________________________________________________________________________________________
+@app.route('/api/get_quiz/<int:pos>', methods=['GET'])
+def get_quiz(pos):
+    id = pos
+    get = Quiz.query.filter_by( id=id ).first()
+    if get:
+        return jsonify({"msg": get.serialize()}), 200
+
+# .................... AGREGAR PREGUNTAS AL QUIZ ....................................... 
+# _____________________________________________________________________________________________________________________________________________
+@app.route('/api/add_preguntas_quiz', methods=['POST'])
+def add_preguntas_quiz():
+    pregunta = request.json.get("pregunta", None)
+    quiz_id = request.json.get("quiz_id", None)
+
+    if not pregunta:
+       return jsonify({"msg": "pregunta is required"}), 400
+
+    if not quiz_id:
+        return jsonify({"msg": "quiz_id is required"}), 400
+
+    preguntas = Pregunta.query.filter_by(pregunta=pregunta).first()
+
+    if preguntas:
+        return jsonify({"msg": "Pregunta already exists"}), 400
+
+    quiz_ids = Quiz.query.filter_by(id=quiz_id).first()
+
+    if quiz_ids is None:
+        return jsonify({"msg": "Quiz_id already not exists"}), 400
+
+    preguntas = Pregunta()
+    preguntas.pregunta = pregunta
+    preguntas.quiz_id = quiz_id
+    preguntas.guardar()
+            
+    return jsonify({"msg": "listo"}), 200
+    
+    
+    """ return jsonify(preguntas.serialize()), 201"""
+    
+# .................... OBTENER PREGUNTAS DEL QUIZ  ....................................... 
+# _____________________________________________________________________________________________________________________________________________
+@app.route('/api/get_preguntas', methods=['GET'])
+def get_preguntas():
+    pregunta = Pregunta()
+    return jsonify(pregunta.serialize()), 201
+
+# .................... OBTENER PREGUNTA ESPECIFICA DEL QUIZ  ....................................... 
+# _____________________________________________________________________________________________________________________________________________
+@app.route('/api/get_preguntas/<int:pos>', methods=['GET'])
+def get_preguntas_pos(pos):
+    id = pos
+    filtrado = Pregunta.query.filter_by(id=id).first()
+    if filtrado:
+        return jsonify({"msg": filtrado.serialize()}), 200
+
+
+# ..................... AGREGAR RESPUESTAS AL QUIZ   ....................................... 
+# _____________________________________________________________________________________________________________________________________________
+@app.route('/api/add_respuestas_quiz', methods=['POST'])
+def add_respuestas_quiz():
+    contenido = request.json.get("contenido", None)
+    opcion = request.json.get("opcion", None)
+    pregunta_id = request.json.get("pregunta_id", None)
+
+    if not contenido:
+       return jsonify({"msg": "contenido is required"}), 400
+    
+    if not pregunta_id:
+        return jsonify({"msg": "pregunta_id is required"}), 400
+
+
+    respuestass = Respuesta.query.filter_by(contenido=contenido).first()
+
+    if respuestass:
+        return jsonify({"msg": "Respuesta already exists"}), 400
+
+    quiz_ids = Pregunta.query.filter_by(id=pregunta_id).first()
+
+    if quiz_ids is None:
+        return jsonify({"msg": "pregunta_id already not exists"}), 400
+
+    respuesta = Respuesta()
+    respuesta.opcion = opcion
+    respuesta.contenido = contenido
+    respuesta.pregunta_id = pregunta_id
+
+    respuesta.guardar()
+
+    return jsonify({"msg": "listo"}), 200
+"""     
+    return jsonify(respuesta.serialize()), 201 """
+    
+# .......................... OBTENER RESPUESTAS ....................................... 
+# _____________________________________________________________________________________________________________________________________________
+@app.route('/api/get_respuestas/<int:pos>', methods=['GET'])
+def get_respuestas(pos):
+    id = pos
+    get = Respuesta.query.filter_by( id=id ).first()
+    if get:
+        return jsonify({"msg": get.serialize()}), 200
+        
 
 if __name__ == "__main__":
     manager.run()
