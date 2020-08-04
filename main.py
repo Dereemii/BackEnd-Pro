@@ -171,9 +171,16 @@ def add_titulo_quiz():
 
 # .......................... REGRESAR EL TITULO DEL QUIZ ....................................... 
 # _____________________________________________________________________________________________________________________________________________
-@app.route('/api/get_quiz/<int:pos>', methods=['GET'])
-def get_quiz(pos):
-    id = pos
+@app.route('/api/get_quiz', methods=['GET'])
+def recibir_quiz():
+    quizs = Quiz.query.all() 
+    quizs = list( map(lambda quiz: quiz.serialize(), quizs)) 
+    return jsonify(quizs), 200
+
+# .......................... REGRESAR EL TITULO DE UN QUIZ ....................................... 
+# _____________________________________________________________________________________________________________________________________________
+@app.route('/api/get_quiz/<int:id>', methods=['GET'])
+def recibir_quiz_especifico(id):
     get = Quiz.query.filter_by( id=id ).first()
     if get:
         return jsonify({"msg": get.serialize()}), 200
@@ -215,14 +222,14 @@ def add_preguntas_quiz():
 # _____________________________________________________________________________________________________________________________________________
 @app.route('/api/get_preguntas', methods=['GET'])
 def get_preguntas():
-    pregunta = Pregunta()
-    return jsonify(pregunta.serialize()), 201
+    preguntas = Pregunta.query.all() 
+    preguntas = list( map(lambda pregunta: pregunta.serialize(), preguntas)) 
+    return jsonify(preguntas), 200
 
 # .................... OBTENER PREGUNTA ESPECIFICA DEL QUIZ  ....................................... 
 # _____________________________________________________________________________________________________________________________________________
-@app.route('/api/get_preguntas/<int:pos>', methods=['GET'])
-def get_preguntas_pos(pos):
-    id = pos
+@app.route('/api/get_preguntas/<int:id>', methods=['GET'])
+def get_preguntas_pos(id):
     filtrado = Pregunta.query.filter_by(id=id).first()
     if filtrado:
         return jsonify({"msg": filtrado.serialize()}), 200
@@ -241,7 +248,6 @@ def add_respuestas_quiz():
     
     if not pregunta_id:
         return jsonify({"msg": "pregunta_id is required"}), 400
-
 
     respuestass = Respuesta.query.filter_by(contenido=contenido).first()
 
@@ -266,12 +272,19 @@ def add_respuestas_quiz():
     
 # .......................... OBTENER RESPUESTAS ....................................... 
 # _____________________________________________________________________________________________________________________________________________
-@app.route('/api/get_respuestas/<int:pos>', methods=['GET'])
-def get_respuestas(pos):
-    id = pos
+@app.route('/api/get_respuestas/', methods=['GET'])
+def get_respuestas():
+    respuestas = Respuesta.query.all() 
+    respuestas = list( map(lambda respuesta: respuesta.serialize(), respuestas)) 
+    return jsonify(respuestas), 200
+
+# .......................... OBTENER UNA RESPUESTAS ....................................... 
+# _____________________________________________________________________________________________________________________________________________
+@app.route('/api/get_respuestas/<int:id>', methods=['GET'])
+def get_respuestas_params(id):
     get = Respuesta.query.filter_by( id=id ).first()
     if get:
-        return jsonify({"msg": get.serialize()}), 200
+        return jsonify({get.serialize()}), 200
         
 
 if __name__ == "__main__":
