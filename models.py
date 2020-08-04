@@ -15,6 +15,7 @@ class User(db.Model):
     direccion = db.Column(db.String(120), nullable=True)
     role_id = db.Column(db.Integer, nullable=True)
     """ puntos_de_experiencia = db.Column(db.Integer, nullable=True) """
+#
 
     def serialize(self):
         return {

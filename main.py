@@ -23,7 +23,7 @@ CORS(app)
 
 manager = Manager(app)
 manager.add_command("db", MigrateCommand)
-
+#       
 # Using the expired_token_loader decorator, we will now call
 # this function whenever an expired but otherwise valid access
 # token attempts to access an endpoint
