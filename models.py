@@ -2,32 +2,28 @@ from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.sql import expression
 db = SQLAlchemy()
 
-class User(db.Model):
-    __tablename__ = 'users'
+class Usuario(db.Model):
+    __tablename__ = 'usuarios'
     id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(120), nullable=True, unique=True)
-    password = db.Column(db.String(120), nullable=True)
-    nombre = db.Column(db.String(120), nullable=True)
-    apellido = db.Column(db.String(120), nullable=True)
-    edad = db.Column(db.Integer, nullable=True)
-    email = db.Column(db.String(120), nullable=True, unique=True)
+    nombre_usuario = db.Column(db.String(120), nullable=True, unique=True)
+    correo = db.Column(db.String(120), nullable=True, unique=True)
+    contraseña = db.Column(db.String(120), nullable=True)
     telefono = db.Column(db.Integer, nullable=True, unique=True)
-    direccion = db.Column(db.String(120), nullable=True)
-    role_id = db.Column(db.Integer, nullable=True)
+    avatar = db.Column(db.String(100), default="sin-foto.png")
+    activo = db.Column(db.Boolean, default=True)
+    rol_id = db.Column(db.Integer, nullable=True)
     """ puntos_de_experiencia = db.Column(db.Integer, nullable=True) """
 #
 
     def serialize(self):
         return {
             "id": self.id,
-            "username": self.username,
-            "nombre": self.nombre,
-            "apellido": self.apellido,
-            "edad": self.edad,
-            "email": self.email,
+            "nombre_usuario": self.nombre_usuario,
+            "correo": self.correo,
             "telefono": self.telefono,
-            "direccion": self.direccion,
-            "role_id": self.role_id,
+            "avatar": self.avatar,
+            "activo": self.activo,
+            "rol_id": self.rol_id,
         }
 
 class Leccion(db.Model):

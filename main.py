@@ -5,7 +5,7 @@ from flask_migrate import Migrate, MigrateCommand
 from flask_cors import CORS
 from flask_bcrypt import Bcrypt
 from flask_jwt_extended import JWTManager, get_jwt_identity, jwt_required, create_access_token
-from models import db, User, Pregunta, Respuesta, Leccion, Teoria
+from models import db, Usuario, Pregunta, Respuesta, Leccion, Teoria
 
 app = Flask(__name__)
 app.url_map.strict_slashes = False
@@ -39,104 +39,90 @@ def my_expired_token_callback(expired_token):
 def main():
     return render_template("index.html")
 
-# .......................... LOGIN ....................................... 
+# .......................... ADMINISTRAR USUARIOS............................
 # _____________________________________________________________________________________________________________________________________________
-@app.route('/api/login', methods=['POST'])
-def login():
-    username = request.json.get("username", None)
-    password = request.json.get("password", None)
+@app.route('/usuarios', methods=['GET', 'POST'])
+@app.route('/usuarios/<int:id>', methods=['GET', 'PUT', 'DELETE'])
 
+def usuarios(id=None):
+    if request.method == 'GET':
+        if id is not None:
+            usuario = Usuario.query.get(id)
+            if not usuario:
+                return jsonify({"msj": "Usuario no encontrado"}), 404
+            return jsonify(usuario.serialize()), 200
+        else:
+            usuarios = Usuario.query.all()
+            usuarios = list(map(lambda usuario: usuario.serialize(), usuarios))
+            return jsonify(usuarios), 200
 
-    if not username:
-        return jsonify({"msg": "Username is required"}), 400
-
-    if not password:
-        return jsonify({"msg": "Password is required"}), 400
-
-    user = User.query.filter_by(username=username).first()
-
-    if not user:
-        return jsonify({"msg": "username/password are incorrect"}), 401
-
-    if not bcrypt.check_password_hash(user.password, password):
-        return jsonify({"msg": "username/password are incorrect"}), 401
-
-    expires = datetime.timedelta(seconds=30) # Duracion para el token
-    data = {
-        "access_token": create_access_token(identity=user.username, expires_delta=expires),
-        "user": user.serialize() 
-    }
-
-    return jsonify(data), 200
-
-# .......................... REGISTER ....................................... 
+# .......................... REGISTRO ....................................... 
 # _____________________________________________________________________________________________________________________________________________    
-@app.route('/api/register', methods=['POST'])
+@app.route('/registro', methods=['POST'])
 def register():
-    username = request.json.get("username", None)
-    password = request.json.get("password", None)
-    nombre = request.json.get("nombre", None)
-    apellido = request.json.get("apellido", None)
-    edad = request.json.get("edad", None)
-    email = request.json.get("email", None)
+    nombre_usuario = request.json.get("nombre_usuario", None)
+    contraseña = request.json.get("contraseña", None)
+    correo = request.json.get("correo", None)
     telefono = request.json.get("telefono", None)
-    direccion = request.json.get("direccion", None)
-    role_id = request.json.get("role_id", None)
+    """ rol_id = request.json.get("rol_id", None) """
 
-    if not username:
-        return jsonify({"msg": "Username is required"}), 400
+    if not nombre_usuario:
+        return jsonify({"msg": "Se requiere un nombre de usuario"}), 400
 
-    if not password:
-        return jsonify({"msg": "Password is required"}), 400
+    if not contraseña:
+        return jsonify({"msg": "Se requiere una contraseña"}), 400
 
-    if not nombre:
-        return jsonify({"msg": "Nombre is required"}), 400
-
-    if not apellido:
-        return jsonify({"msg": "Apellido is required"}), 400
-
-    if not edad:
-        return jsonify({"msg": "Edad is required"}), 400
-
-    if not email:
-        return jsonify({"msg": "Email is required"}), 400
+    if not correo:
+        return jsonify({"msg": "Se requiere un correo"}), 400
 
     if not telefono:
-        return jsonify({"msg": "Telefono is required"}), 400
+        return jsonify({"msg": "Se requiere  un telefono"}), 400
 
-    if not direccion:
-        return jsonify({"msg": "Direccion is required"}), 400
+    """ if not rol_id:
+        return jsonify({"msg": "Se requiere un rol"}), 400 """
 
-    if not role_id:
-        return jsonify({"msg": "Role_id is required"}), 400
+    usuario = Usuario.query.filter_by(nombre_usuario=nombre_usuario).first()
 
-    user = User.query.filter_by(username=username).first()
+    if usuario:
+        return jsonify({"msg": "Nombre de usuario ya existe"}), 400
 
-    if user:
-        return jsonify({"msg": "Username already exists"}), 400
+    usuario = Usuario()
+    usuario.nombre_usuario = nombre_usuario
+    usuario.correo = correo
+    usuario.telefono = telefono
+    usuario.password = bcrypt.generate_password_hash(contraseña).decode("utf-8")
 
-    user = User()
-    user.username = username
-    user.nombre = nombre
-    user.apellido = apellido
-    user.edad = edad
-    user.email = email
-    user.telefono = telefono
-    user.direccion = direccion
-    user.role_id = role_id
-    user.password = bcrypt.generate_password_hash(password).decode("utf-8")
-
-    db.session.add(user)
+    db.session.add(usuario)
     db.session.commit()
 
     return jsonify({"msg": "registro existo, por favor hacer login"}), 201
 
-# .......................... USERS ....................................... 
+# .......................... LOGIN ....................................... 
 # _____________________________________________________________________________________________________________________________________________
-@app.route("/api/users", methods=['GET', 'POST'])
-@jwt_required
-def users():
-    pass
+@app.route('/login', methods=['POST'])
+def login():
+    correo = request.json.get("correo", None)
+    contraseña = request.json.get("contraseña", None)
+
+    if not contraseña:
+        return jsonify({"msg": "Se requiere una contraseña"}), 400
+
+    usuario = Usuario.query.filter_by(correo=correo).first()
+
+    if not usuario:
+        return jsonify({"msg": "correo/contraseña son incorrectos"}), 401
+
+    if not bcrypt.check_password_hash(usuario.contraseña, contraseña):
+        return jsonify({"msg": "correo/contraseña son incorrectos"}), 401
+
+    expires = datetime.timedelta(days=3) # Duracion para el token
+    datos = {
+        "access_token": create_access_token(identity=usuario.nombre_usuario, expires_delta=expires),
+        "usuario": usuario.serialize() 
+    }
+
+    return jsonify({"succes": "Log In exitoso!", "datos": datos}), 200
+
 # .......................... PROFILE ....................................... 
 # _____________________________________________________________________________________________________________________________________________
 @app.route('/api/profile')
