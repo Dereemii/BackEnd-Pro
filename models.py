@@ -7,7 +7,7 @@ class Usuario(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     nombre_usuario = db.Column(db.String(120), nullable=True, unique=True)
     correo = db.Column(db.String(120), nullable=True, unique=True)
-    contraseña = db.Column(db.String(120), nullable=True)
+    clave = db.Column(db.String(120), nullable=True)
     telefono = db.Column(db.Integer, nullable=True, unique=True)
     avatar = db.Column(db.String(100), default="sin-foto.png")
     activo = db.Column(db.Boolean, default=True)

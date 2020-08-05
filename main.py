@@ -61,7 +61,7 @@ def usuarios(id=None):
 @app.route('/registro', methods=['POST'])
 def register():
     nombre_usuario = request.json.get("nombre_usuario", None)
-    contraseña = request.json.get("contraseña", None)
+    clave = request.json.get("clave", None)
     correo = request.json.get("correo", None)
     telefono = request.json.get("telefono", None)
     """ rol_id = request.json.get("rol_id", None) """
@@ -69,8 +69,8 @@ def register():
     if not nombre_usuario:
         return jsonify({"msg": "Se requiere un nombre de usuario"}), 400
 
-    if not contraseña:
-        return jsonify({"msg": "Se requiere una contraseña"}), 400
+    if not clave:
+        return jsonify({"msg": "Se requiere una clave"}), 400
 
     if not correo:
         return jsonify({"msg": "Se requiere un correo"}), 400
@@ -90,7 +90,8 @@ def register():
     usuario.nombre_usuario = nombre_usuario
     usuario.correo = correo
     usuario.telefono = telefono
-    usuario.password = bcrypt.generate_password_hash(contraseña).decode("utf-8")
+    usuario.password = bcrypt.generate_password_hash(clave)
+    """ usuario.password = bcrypt.generate_password_hash(clave).decode("utf-8") """
 
     db.session.add(usuario)
     db.session.commit()
@@ -102,22 +103,26 @@ def register():
 @app.route('/login', methods=['POST'])
 def login():
     correo = request.json.get("correo", None)
-    contraseña = request.json.get("contraseña", None)
+    clave = request.json.get("clave", None)
 
-    if not contraseña:
-        return jsonify({"msg": "Se requiere una contraseña"}), 400
+    if not correo:
+        return jsonify({"msg": "Se requiere un correo"}), 400
+
+    if not clave:
+        return jsonify({"msg": "Se requiere una clave"}), 400
 
     usuario = Usuario.query.filter_by(correo=correo).first()
 
     if not usuario:
-        return jsonify({"msg": "correo/contraseña son incorrectos"}), 401
+        return jsonify({"msg": "correo/clave son incorrectos"}), 401
 
-    if not bcrypt.check_password_hash(usuario.contraseña, contraseña):
-        return jsonify({"msg": "correo/contraseña son incorrectos"}), 401
+    if not bcrypt.check_password_hash(usuario.clave, clave):
+        return jsonify({"msg": "correo/clave son incorrectos"}), 401
 
     expires = datetime.timedelta(days=3) # Duracion para el token
+
     datos = {
-        "access_token": create_access_token(identity=usuario.nombre_usuario, expires_delta=expires),
+        "access_token": create_access_token(identity=usuario.correo, expires_delta=expires),
         "usuario": usuario.serialize() 
     }
 
