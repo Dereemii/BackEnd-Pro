@@ -5,7 +5,7 @@ from flask_migrate import Migrate, MigrateCommand
 from flask_cors import CORS
 from flask_bcrypt import Bcrypt
 from flask_jwt_extended import JWTManager, get_jwt_identity, jwt_required, create_access_token
-from models import db, User, Person, Address, Pregunta, Respuesta, Quiz
+from models import db, User, Pregunta, Respuesta, Leccion, Teoria
 
 app = Flask(__name__)
 app.url_map.strict_slashes = False
@@ -102,13 +102,13 @@ def register():
         return jsonify({"msg": "Email is required"}), 400
 
     if not telefono:
-        return jsonify({"msg": "Email is required"}), 400
+        return jsonify({"msg": "Telefono is required"}), 400
 
     if not direccion:
-        return jsonify({"msg": "Email is required"}), 400
+        return jsonify({"msg": "Direccion is required"}), 400
 
     if not role_id:
-        return jsonify({"msg": "Email is required"}), 400
+        return jsonify({"msg": "Role_id is required"}), 400
 
     user = User.query.filter_by(username=username).first()
 
@@ -146,146 +146,192 @@ def profile():
     user = User.query.filter_by( username=username ).first()
     return jsonify({"msg": f"Perfil del usuario {username}", "user": user.serialize()}), 200
 
-# ..................... AGREGAR TITULO AL QUIZ ....................................... 
+# ..................... AGREGAR NOMBRE A LA LECCION ....................................... 
 # _____________________________________________________________________________________________________________________________________________
-@app.route('/api/add_titulo_quiz', methods=['POST'])
-def add_titulo_quiz():
-    titulo = request.json.get("titulo", None)
+@app.route('/api/agregar_nombre_leccion', methods=['POST'])
+def agregar_nombre_leccion():
+    nombre = request.json.get("nombre", None)
 
-    if not titulo:
-       return jsonify({"msg": "titulo is required"}), 400
+    if not nombre:
+       return jsonify({"msg": "nombre es requerido"}), 400
 
     
-    quiz = Quiz.query.filter_by(titulo=titulo).first()
+    encontrar_nombre = Leccion.query.filter_by(nombre=nombre).first()
 
-    if quiz:
-        return jsonify({"msg": "Titulo already exists"}), 400
+    if encontrar_nombre:
+        return jsonify({"msg": "El Nombre Ya Existe"}), 400
 
     
-    quiz = Quiz()
-    quiz.titulo = titulo
+    leccion = Leccion()
+    leccion.nombre = nombre
     
-    quiz.guardar()
+    leccion.guardar()
 
-    return jsonify(quiz.serialize()), 201
+    return jsonify(leccion.serialize()), 201
 
-# .......................... REGRESAR EL TITULO DEL QUIZ ....................................... 
+# ................... REGRESAR EL NOMBRE DE LA lECCION ....................................... 
 # _____________________________________________________________________________________________________________________________________________
-@app.route('/api/get_quiz', methods=['GET'])
-def recibir_quiz():
-    quizs = Quiz.query.all() 
-    quizs = list( map(lambda quiz: quiz.serialize(), quizs)) 
-    return jsonify(quizs), 200
+@app.route('/api/obtener_nombre_leccion', methods=['GET'])
+def obtener_nombres_lecciones():
+    lecciones = Leccion.query.all() 
+    lecciones = list( map(lambda leccion: leccion.serialize(), lecciones)) 
+    return jsonify(lecciones), 200
 
-# .......................... REGRESAR EL TITULO DE UN QUIZ ....................................... 
+# ............. REGRESAR EL NOMBRE ESPECIFICO DE UNA LECCION ....................................... 
 # _____________________________________________________________________________________________________________________________________________
-@app.route('/api/get_quiz/<int:id>', methods=['GET'])
-def recibir_quiz_especifico(id):
-    get = Quiz.query.filter_by( id=id ).first()
-    if get:
-        return jsonify({"msg": get.serialize()}), 200
+@app.route('/api/obtener_nombre_leccion/<int:id>', methods=['GET'])
+def obtener_nombre_especifico_leccion(id):
+    leccion = Leccion.query.filter_by( id=id ).first()
+    if leccion:
+        return jsonify(leccion.serialize()), 200
 
 # .................... AGREGAR PREGUNTAS AL QUIZ ....................................... 
 # _____________________________________________________________________________________________________________________________________________
-@app.route('/api/add_preguntas_quiz', methods=['POST'])
-def add_preguntas_quiz():
-    pregunta = request.json.get("pregunta", None)
-    quiz_id = request.json.get("quiz_id", None)
+@app.route('/api/agregar_preguntas', methods=['POST'])
+def agregar_preguntas():
+    enunciado = request.json.get("enunciado", None)
+    leccion_id = request.json.get("leccion_id", None)
 
-    if not pregunta:
-       return jsonify({"msg": "pregunta is required"}), 400
+    if not enunciado:
+       return jsonify({"msg": "enunciado es requerido"}), 400
 
-    if not quiz_id:
-        return jsonify({"msg": "quiz_id is required"}), 400
+    if not leccion_id:
+        return jsonify({"msg": "leccion_id es requerido"}), 400
 
-    preguntas = Pregunta.query.filter_by(pregunta=pregunta).first()
+    encontrar_enunciado = Pregunta.query.filter_by(enunciado=enunciado).first()
 
-    if preguntas:
-        return jsonify({"msg": "Pregunta already exists"}), 400
+    if encontrar_enunciado:
+        return jsonify({"msg": "El Enunciado ya existe"}), 400
 
-    quiz_ids = Quiz.query.filter_by(id=quiz_id).first()
+    encontrar_leccion_id = Leccion.query.filter_by(id=leccion_id).first()
 
-    if quiz_ids is None:
-        return jsonify({"msg": "Quiz_id already not exists"}), 400
+    if encontrar_leccion_id is None:
+        return jsonify({"msg": "El leccion_id no existe"}), 400
 
     preguntas = Pregunta()
-    preguntas.pregunta = pregunta
-    preguntas.quiz_id = quiz_id
+
+    preguntas.enunciado = enunciado
+    preguntas.leccion_id = leccion_id
+
     preguntas.guardar()
             
-    return jsonify({"msg": "listo"}), 200
+    return jsonify(preguntas.serialize()), 201
     
-    
-    """ return jsonify(preguntas.serialize()), 201"""
-    
-# .................... OBTENER PREGUNTAS DEL QUIZ  ....................................... 
+# .................... OBTENER PREGUNTAS DE LA LECCION  ....................................... 
 # _____________________________________________________________________________________________________________________________________________
-@app.route('/api/get_preguntas', methods=['GET'])
-def get_preguntas():
+@app.route('/api/obtener_pregunta', methods=['GET'])
+def obtener_pregunta():
     preguntas = Pregunta.query.all() 
     preguntas = list( map(lambda pregunta: pregunta.serialize(), preguntas)) 
-    return jsonify(preguntas), 200
+    return jsonify(preguntas), 201
 
-# .................... OBTENER PREGUNTA ESPECIFICA DEL QUIZ  ....................................... 
+# .................... OBTENER PREGUNTA ESPECIFICA DE LA LECCION  ....................................... 
 # _____________________________________________________________________________________________________________________________________________
-@app.route('/api/get_preguntas/<int:id>', methods=['GET'])
-def get_preguntas_pos(id):
-    filtrado = Pregunta.query.filter_by(id=id).first()
-    if filtrado:
-        return jsonify({"msg": filtrado.serialize()}), 200
+@app.route('/api/obtener_pregunta/<int:id>', methods=['GET'])
+def obtener_pregunta_especifica(id):
+    preguntas = Pregunta.query.filter_by(id=id).first()
+    if preguntas:
+        return jsonify(preguntas.serialize()), 201
 
 
-# ..................... AGREGAR RESPUESTAS AL QUIZ   ....................................... 
+# ..................... AGREGAR RESPUESTAS A LA LECCION  ....................................... 
 # _____________________________________________________________________________________________________________________________________________
-@app.route('/api/add_respuestas_quiz', methods=['POST'])
-def add_respuestas_quiz():
-    contenido = request.json.get("contenido", None)
+@app.route('/api/agregar_respuestas_leccion', methods=['POST'])
+def agregar_respuestas_leccion():
+    respuesta = request.json.get("respuesta", None)
     opcion = request.json.get("opcion", None)
     pregunta_id = request.json.get("pregunta_id", None)
 
-    if not contenido:
-       return jsonify({"msg": "contenido is required"}), 400
+    if not respuesta:
+       return jsonify({"msg": "respuesta es requerido"}), 400
     
+    if not opcion:
+        return jsonify({"msg": "opcion es requerido"})
+
     if not pregunta_id:
-        return jsonify({"msg": "pregunta_id is required"}), 400
+        return jsonify({"msg": "pregunta_id es requerido"}), 400
 
-    respuestass = Respuesta.query.filter_by(contenido=contenido).first()
+    encontrar_respuesta = Respuesta.query.filter_by(respuesta=respuesta).first()
 
-    if respuestass:
-        return jsonify({"msg": "Respuesta already exists"}), 400
+    if encontrar_respuesta:
+        return jsonify({"msg": "La Respuesta ya existe"}), 400
 
-    quiz_ids = Pregunta.query.filter_by(id=pregunta_id).first()
+    encontrar_pregunta_id = Pregunta.query.filter_by(id=pregunta_id).first()
 
-    if quiz_ids is None:
-        return jsonify({"msg": "pregunta_id already not exists"}), 400
+    if encontrar_pregunta_id is None:
+        return jsonify({"msg": "pregunta_id no existe"}), 400
 
-    respuesta = Respuesta()
-    respuesta.opcion = opcion
-    respuesta.contenido = contenido
-    respuesta.pregunta_id = pregunta_id
+    respuestas = Respuesta()
+    respuestas.opcion = opcion
+    respuestas.respuesta = respuesta
+    respuestas.pregunta_id = pregunta_id
 
-    respuesta.guardar()
+    respuestas.guardar()
 
-    return jsonify({"msg": "listo"}), 200
-"""     
-    return jsonify(respuesta.serialize()), 201 """
+    return jsonify(respuestas.serialize()), 201
     
 # .......................... OBTENER RESPUESTAS ....................................... 
 # _____________________________________________________________________________________________________________________________________________
-@app.route('/api/get_respuestas/', methods=['GET'])
-def get_respuestas():
+@app.route('/api/obtener_respuesta', methods=['GET'])
+def obtener_respuesta():
     respuestas = Respuesta.query.all() 
     respuestas = list( map(lambda respuesta: respuesta.serialize(), respuestas)) 
-    return jsonify(respuestas), 200
+    return jsonify(respuestas), 201
 
-# .......................... OBTENER UNA RESPUESTAS ....................................... 
+# .......................... OBTENER UNA RESPUESTA ....................................... 
 # _____________________________________________________________________________________________________________________________________________
-@app.route('/api/get_respuestas/<int:id>', methods=['GET'])
-def get_respuestas_params(id):
-    get = Respuesta.query.filter_by( id=id ).first()
-    if get:
-        return jsonify({get.serialize()}), 200
-        
+@app.route('/api/obtener_respuesta/<int:id>', methods=['GET'])
+def obtener_respuesta_especifica(id):
+    respuestas = Respuesta.query.filter_by( id=id ).first()
+    if respuestas:
+        return jsonify(respuestas.serialize()), 201
+
+# ..................... AGREGAR TEORIA DE LA LECCION  ....................................... 
+# _____________________________________________________________________________________________________________________________________________
+@app.route('/api/agregar_teoria', methods=['POST'])
+def agregar_teoria():
+    titulo = request.json.get("titulo", None)
+    contenido = request.json.get("contenido", None)
+    nombre_icono = request.json.get("nombre_icono", None)
+    multimedia = request.json.get("multimedia", None)
+    leccion_id = request.json.get("leccion_id", None)
+
+    if not titulo:
+        return jsonify({"msg": "titulo es requerido"}), 401
+    if not contenido:
+       return jsonify({"msg": "contenido es requerido"}), 401
+    if not leccion_id:
+       return jsonify({"msg": "leccion_id es requerido"}), 401
+    encontrar_titulo = Teoria.query.filter_by( titulo=titulo ).first()
+    if encontrar_titulo:
+        return jsonify({"msg": "El Titulo ya existe"}), 401
+
+    teoria = Teoria()
+    teoria.titulo = titulo
+    teoria.contenido = contenido
+    teoria.nombre_icono = nombre_icono
+    teoria.multimedia = multimedia
+    teoria.leccion_id = leccion_id
+
+    teoria.guardar()
+
+    return jsonify(teoria.serialize()), 201
+
+# ................... REGRESAR LAS TEORIAS DE LAS lECCIONES   ....................................... 
+# _____________________________________________________________________________________________________________________________________________
+@app.route('/api/obtener_teoria', methods=['GET'])
+def obtener_teorias():
+    teorias = Teoria.query.all() 
+    teorias = list( map(lambda teoria: teoria.serialize(), teorias)) 
+    return jsonify(teorias), 201
+
+# ................... REGRESAR LAS TEORIAS DE LAS lECCIONES   ....................................... 
+# _____________________________________________________________________________________________________________________________________________
+@app.route('/api/obtener_teoria/<int:id>', methods=['GET'])
+def obtener_teoria_especifica(id):
+    teorias = Teoria.query.filter_by( id=id ).first()
+    if teorias:
+        return jsonify(teorias.serialize()), 201
 
 if __name__ == "__main__":
     manager.run()

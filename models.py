@@ -30,34 +30,17 @@ class User(db.Model):
             "role_id": self.role_id,
         }
 
-
-
-       # EJEMPLO !!!!!!! 
-#   _________________________________________________________________________________________
-
-class Person(db.Model):
+class Leccion(db.Model):
+    __tablename__= "lecciones"
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(50), nullable=False)
-    addresses = db.relationship('Address', backref='person', lazy=True)
-
-class Address(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    email = db.Column(db.String(120), nullable=False)
-    person_id = db.Column(db.Integer, db.ForeignKey('person.id'), nullable=False)
-
-#   ______________________________________________________________________________________
-
-
-class Quiz(db.Model):
-    __tablename__= "quiz"
-    id = db.Column(db.Integer, primary_key=True)
-    titulo = db.Column(db.String(120), nullable=True, unique=True)
-    preguntas = db.relationship("Pregunta", backref=("quiz"), lazy=True)
+    nombre = db.Column(db.String(120), nullable=False, unique=True)
+    preguntas = db.relationship("Pregunta", backref=("lecciones"), lazy=True)
+    teoria = db.relationship("Teoria", backref=("lecciones"), lazy=True)
 
     def serialize(self):
         return {
             "id": self.id,
-            "titulo": self.titulo,
+            "nombre": self.nombre,
         }
 
     def guardar(self):
@@ -74,17 +57,17 @@ class Quiz(db.Model):
 class Pregunta(db.Model):
     __tablename__= "preguntas"
     id = db.Column(db.Integer, primary_key=True)
-    quiz_id = db.Column(db.Integer, db.ForeignKey("quiz.id"), nullable=False)
-    pregunta = db.Column(db.String(120), nullable=True, unique=True)
+    enunciado = db.Column(db.String(120), nullable=False, unique=True)
+    leccion_id = db.Column(db.Integer, db.ForeignKey("lecciones.id"), nullable=False)
     respuestas = db.relationship("Respuesta", backref="preguntas", lazy=True)
 
     def serialize(self):
         return {
             "id": self.id,
-            "pregunta": self.pregunta,
-            "quiz": {
-                "id": self.quiz.id,
-                "titulo": self.quiz.titulo
+            "enunciado": self.enunciado,
+            "leccion": {
+                "id": self.lecciones.id,
+                "nombre": self.lecciones.nombre
             }
         }
   
@@ -99,24 +82,57 @@ class Pregunta(db.Model):
         db.session.delete(self)
         db.session.commit()
 
+class Teoria(db.Model):
+    __tablename__= "teorias"
+    id = db.Column(db.Integer, primary_key=True)
+    titulo = db.Column(db.String(120), nullable=False, unique=True)
+    contenido = db.Column(db.String(500), nullable=False)
+    nombre_icono = db.Column(db.String(120), nullable=True, default=None)
+    multimedia = db.Column(db.String(120), nullable=True, default=None)
+    leccion_id = db.Column(db.Integer, db.ForeignKey('lecciones.id'), nullable=False)
+
+    def serialize(self):
+        return {
+            "titulo":self.titulo,
+            "contenido":self.contenido,
+            "nombre_icono":self.nombre_icono,
+            "multimedia":self.multimedia,
+            "leccion":{
+                "id":self.lecciones.id,
+                "nombre":self.lecciones.nombre,
+            }
+        }
+
+    def guardar(self):
+        db.session.add(self)
+        db.session.commit()
+
+    def actualizar(self):
+        db.session.commit()
+
+    def borrar(self):
+        db.session.delete(self)
+        db.session.commit()
+
+
 class Respuesta(db.Model):
     __tablename__= "respuestas"
     id = db.Column(db.Integer, primary_key=True)
+    respuesta = db.Column(db.String(120), nullable=False)
+    opcion = db.Column(db.Boolean, nullable=False)
     pregunta_id = db.Column(db.Integer, db.ForeignKey("preguntas.id"), nullable=False)
-    contenido = db.Column(db.String(120), nullable=True)
-    opcion = db.Column(db.String(120), nullable=False)
 
     def serialize(self):
         return {
             "id": self.id,
-            "contenido": self.contenido,
+            "respuesta": self.respuesta,
             "opcion": self.opcion,
             "pregunta": {
                 "id": self.preguntas.id,
-                "pregunta": self.preguntas.pregunta,
-                "quiz": {
-                    "id": self.preguntas.quiz.id,
-                    "titulo": self.preguntas.quiz.titulo
+                "enunciado": self.preguntas.enunciado,
+                "leccion": {
+                    "id": self.preguntas.lecciones.id,
+                    "nombre": self.preguntas.lecciones.nombre
                 }
             }
         }
