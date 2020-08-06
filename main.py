@@ -1,11 +1,17 @@
-import datetime
+import os, datetime
 from flask import Flask, jsonify, render_template, request
 from flask_script import Manager
 from flask_migrate import Migrate, MigrateCommand
 from flask_cors import CORS
 from flask_bcrypt import Bcrypt
 from flask_jwt_extended import JWTManager, get_jwt_identity, jwt_required, create_access_token
-from models import db, Usuario, Pregunta, Respuesta, Leccion, Teoria
+from werkzeug.utils import secure_filename
+from models import db, Usuario, Pregunta, Respuesta, Leccion, Teoria, Rol
+from libs.utils import allowed_file
+
+UPLOAD_FOLDER = "static"
+ALLOWED_EXTENSIONS_IMGS = {'png', 'jpg', 'jpeg', 'gif'}
+ALLOWED_EXTENSIONS_FILES = {'pdf', 'png', 'jpg', 'jpeg'}
 
 app = Flask(__name__)
 app.url_map.strict_slashes = False
@@ -14,6 +20,7 @@ app.config['ENV'] = "development"
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False 
 app.config['SQLALCHEMY_DATABASE_URI'] = "sqlite:///database.db"
 app.config['JWT_SECRET_KEY'] = "0682f007844a0266990df1b2912f95bc"
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 db.init_app(app)
 jwt = JWTManager(app)
@@ -90,13 +97,12 @@ def register():
     usuario.nombre_usuario = nombre_usuario
     usuario.correo = correo
     usuario.telefono = telefono
-    usuario.password = bcrypt.generate_password_hash(clave)
+    usuario.clave = bcrypt.generate_password_hash(clave)
     """ usuario.password = bcrypt.generate_password_hash(clave).decode("utf-8") """
 
-    db.session.add(usuario)
-    db.session.commit()
+    usuario.guardar()
 
-    return jsonify({"msg": "registro existo, por favor hacer login"}), 201
+    return jsonify({"msg": "registro exitoso, por favor hacer login"}), 201
 
 # .......................... LOGIN ....................................... 
 # _____________________________________________________________________________________________________________________________________________
@@ -128,25 +134,29 @@ def login():
 
     return jsonify({"succes": "Log In exitoso!", "datos": datos}), 200
 
-# .......................... PROFILE ....................................... 
+# .......................... PERFIL ....................................... 
 # _____________________________________________________________________________________________________________________________________________
-@app.route('/api/profile')
+@app.route('/perfil', methods=['GET'])
 @jwt_required
-def profile():
-    username = get_jwt_identity()
-    user = User.query.filter_by( username=username ).first()
-    return jsonify({"msg": f"Perfil del usuario {username}", "user": user.serialize()}), 200
+def perfil():
+    correo = get_jwt_identity()
+    usuario = Usuario.query.filter_by( correo=correo ).first()
+    return jsonify(usuario.serialize()), 200
+ #   return jsonify({"msg": f"Perfil del usuario {nombre_usuario}", "usuario": usuario.serialize()}), 200
 
 # ..................... AGREGAR NOMBRE A LA LECCION ....................................... 
 # _____________________________________________________________________________________________________________________________________________
-@app.route('/api/agregar_nombre_leccion', methods=['POST'])
+@app.route('/agregar_nombre_leccion', methods=['POST'])
 def agregar_nombre_leccion():
     nombre = request.json.get("nombre", None)
+    puntuacion = request.json.get("puntuacion", None)
 
     if not nombre:
        return jsonify({"msg": "nombre es requerido"}), 400
 
-    
+    if not puntuacion:
+        return jsonify({"msg": "puntuacion es requerido"}), 400
+
     encontrar_nombre = Leccion.query.filter_by(nombre=nombre).first()
 
     if encontrar_nombre:
@@ -155,6 +165,7 @@ def agregar_nombre_leccion():
     
     leccion = Leccion()
     leccion.nombre = nombre
+    leccion.puntuacion = puntuacion
     
     leccion.guardar()
 
@@ -162,7 +173,7 @@ def agregar_nombre_leccion():
 
 # ................... REGRESAR EL NOMBRE DE LA lECCION ....................................... 
 # _____________________________________________________________________________________________________________________________________________
-@app.route('/api/obtener_nombre_leccion', methods=['GET'])
+@app.route('/obtener_nombre_leccion', methods=['GET'])
 def obtener_nombres_lecciones():
     lecciones = Leccion.query.all() 
     lecciones = list( map(lambda leccion: leccion.serialize(), lecciones)) 
@@ -170,7 +181,7 @@ def obtener_nombres_lecciones():
 
 # ............. REGRESAR EL NOMBRE ESPECIFICO DE UNA LECCION ....................................... 
 # _____________________________________________________________________________________________________________________________________________
-@app.route('/api/obtener_nombre_leccion/<int:id>', methods=['GET'])
+@app.route('/obtener_nombre_leccion/<int:id>', methods=['GET'])
 def obtener_nombre_especifico_leccion(id):
     leccion = Leccion.query.filter_by( id=id ).first()
     if leccion:
@@ -178,7 +189,7 @@ def obtener_nombre_especifico_leccion(id):
 
 # .................... AGREGAR PREGUNTAS AL QUIZ ....................................... 
 # _____________________________________________________________________________________________________________________________________________
-@app.route('/api/agregar_preguntas', methods=['POST'])
+@app.route('/agregar_preguntas', methods=['POST'])
 def agregar_preguntas():
     enunciado = request.json.get("enunciado", None)
     leccion_id = request.json.get("leccion_id", None)
@@ -210,7 +221,7 @@ def agregar_preguntas():
     
 # .................... OBTENER PREGUNTAS DE LA LECCION  ....................................... 
 # _____________________________________________________________________________________________________________________________________________
-@app.route('/api/obtener_pregunta', methods=['GET'])
+@app.route('/obtener_pregunta', methods=['GET'])
 def obtener_pregunta():
     preguntas = Pregunta.query.all() 
     preguntas = list( map(lambda pregunta: pregunta.serialize(), preguntas)) 
@@ -218,7 +229,7 @@ def obtener_pregunta():
 
 # .................... OBTENER PREGUNTA ESPECIFICA DE LA LECCION  ....................................... 
 # _____________________________________________________________________________________________________________________________________________
-@app.route('/api/obtener_pregunta/<int:id>', methods=['GET'])
+@app.route('/obtener_pregunta/<int:id>', methods=['GET'])
 def obtener_pregunta_especifica(id):
     preguntas = Pregunta.query.filter_by(id=id).first()
     if preguntas:
@@ -227,7 +238,7 @@ def obtener_pregunta_especifica(id):
 
 # ..................... AGREGAR RESPUESTAS A LA LECCION  ....................................... 
 # _____________________________________________________________________________________________________________________________________________
-@app.route('/api/agregar_respuestas_leccion', methods=['POST'])
+@app.route('/agregar_respuestas_leccion', methods=['POST'])
 def agregar_respuestas_leccion():
     respuesta = request.json.get("respuesta", None)
     opcion = request.json.get("opcion", None)
@@ -263,7 +274,7 @@ def agregar_respuestas_leccion():
     
 # .......................... OBTENER RESPUESTAS ....................................... 
 # _____________________________________________________________________________________________________________________________________________
-@app.route('/api/obtener_respuesta', methods=['GET'])
+@app.route('/obtener_respuesta', methods=['GET'])
 def obtener_respuesta():
     respuestas = Respuesta.query.all() 
     respuestas = list( map(lambda respuesta: respuesta.serialize(), respuestas)) 
@@ -271,7 +282,7 @@ def obtener_respuesta():
 
 # .......................... OBTENER UNA RESPUESTA ....................................... 
 # _____________________________________________________________________________________________________________________________________________
-@app.route('/api/obtener_respuesta/<int:id>', methods=['GET'])
+@app.route('/obtener_respuesta/<int:id>', methods=['GET'])
 def obtener_respuesta_especifica(id):
     respuestas = Respuesta.query.filter_by( id=id ).first()
     if respuestas:
@@ -279,7 +290,7 @@ def obtener_respuesta_especifica(id):
 
 # ..................... AGREGAR TEORIA DE LA LECCION  ....................................... 
 # _____________________________________________________________________________________________________________________________________________
-@app.route('/api/agregar_teoria', methods=['POST'])
+@app.route('/agregar_teoria', methods=['POST'])
 def agregar_teoria():
     titulo = request.json.get("titulo", None)
     contenido = request.json.get("contenido", None)
@@ -310,7 +321,7 @@ def agregar_teoria():
 
 # ................... REGRESAR LAS TEORIAS DE LAS lECCIONES   ....................................... 
 # _____________________________________________________________________________________________________________________________________________
-@app.route('/api/obtener_teoria', methods=['GET'])
+@app.route('/obtener_teoria', methods=['GET'])
 def obtener_teorias():
     teorias = Teoria.query.all() 
     teorias = list( map(lambda teoria: teoria.serialize(), teorias)) 
@@ -318,11 +329,84 @@ def obtener_teorias():
 
 # ................... REGRESAR LAS TEORIAS DE LAS lECCIONES   ....................................... 
 # _____________________________________________________________________________________________________________________________________________
-@app.route('/api/obtener_teoria/<int:id>', methods=['GET'])
+@app.route('/obtener_teoria/<int:id>', methods=['GET'])
 def obtener_teoria_especifica(id):
     teorias = Teoria.query.filter_by( id=id ).first()
     if teorias:
         return jsonify(teorias.serialize()), 201
+
+# ................... GUARDAR IMAGEN DE PERFIL   ....................................... 
+# _____________________________________________________________________________________________________________________________________________
+@app.route('/fotoperfil', methods=["POST"])
+@jwt_required
+def fotoperfil():
+    if 'avatar' not in request.files:
+        return jsonify({"msg": "Avatar es requerido"}), 401
+
+    file = request.files['avatar']
+    if file.filename == '':
+        return jsonify({"msg": "No seleccionaste el archivo"}), 401
+
+    if file and allowed_file(file.filename, ALLOWED_EXTENSIONS_IMGS):
+
+        correo = get_jwt_identity()
+        usuario = Usuario.query.filter_by( correo=correo ).first()
+
+        filename = secure_filename(file.filename)
+        filename = "usuario_" + str(usuario.id) + "_" + filename
+        file.save(os.path.join(app.config['UPLOAD_FOLDER']+"/imagenes", filename))
+
+        usuario.avatar = filename
+        usuario.actualizar()
+
+        return jsonify({"msg": "imagen de perfil guardada satisfactoriamente"}), 200
+    return jsonify({"msg": "imagen de perfil no pudo guardarse"}), 400
+    
+# ................... ROLES TANTO PARA TODOS COMO PARA UNO EN ESPECIFICO  ....................................... 
+# _____________________________________________________________________________________________________________________________________________
+@app.route('/rol', methods=['GET', 'POST'])
+@app.route('/rol/<int:id>', methods=['GET', 'POST', 'DELETE', 'PUT'])
+def todos_los_roles(id=None):
+
+#----------------------------- METODO GET --------------------------------------------------
+
+    if request.method == "GET":
+        if id is not None:
+            rol = Rol.query.get(id)
+            if rol:
+                return jsonify(rol.serialize()), 205
+            return jsonify({'msg': 'Este rol no existe'}), 405
+        else:
+            roles = Rol.query.all()
+            roles = list(map(lambda rol: rol.serialize(), roles))
+            return jsonify(roles), 205
+
+#------------------------------ METODO PUT ------------------------------------------------
+    
+    elif request.method == 'PUT':
+        roles = Rol.query.get(id)
+        roles.rol = request.json.get("rol","")
+
+        roles.actualizar()
+        return jsonify({"msg": "Actualizado satisfactoriamente"}), 205
+
+#------------------------------ METODO DELETE -------------------------------------------------
+
+    elif request.method == "DELETE":
+        rol = Rol.query.get(id)
+        
+        rol.borrar()
+        return jsonify({"msg": "Borrado satisfactoriamente"}), 205
+
+#------------------------------ METODO POST ----------------------------------------------
+
+    elif request.method == "POST":
+        rol = Rol()
+        rol.rol = request.json.get("rol","")
+        rol.usuario_id = request.json.get("usuario_id","")
+
+        rol.guardar()
+        return jsonify(rol.serialize()), 205
 
 if __name__ == "__main__":
     manager.run()

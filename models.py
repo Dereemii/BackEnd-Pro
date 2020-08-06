@@ -5,15 +5,14 @@ db = SQLAlchemy()
 class Usuario(db.Model):
     __tablename__ = 'usuarios'
     id = db.Column(db.Integer, primary_key=True)
-    nombre_usuario = db.Column(db.String(120), nullable=True, unique=True)
-    correo = db.Column(db.String(120), nullable=True, unique=True)
-    clave = db.Column(db.String(120), nullable=True)
+    nombre_usuario = db.Column(db.String(120), nullable=False, unique=True)
+    correo = db.Column(db.String(120), nullable=False, unique=True)
+    clave = db.Column(db.String(120), nullable=False)
     telefono = db.Column(db.Integer, nullable=True, unique=True)
     avatar = db.Column(db.String(100), default="sin-foto.png")
     activo = db.Column(db.Boolean, default=True)
-    rol_id = db.Column(db.Integer, nullable=True)
-    """ puntos_de_experiencia = db.Column(db.Integer, nullable=True) """
-#
+    puntos_experiencia = db.Column(db.Integer, nullable=True, default=0)
+    rol = db.relationship("Rol", backref=("usuarios"), lazy=True, uselist=False)
 
     def serialize(self):
         return {
@@ -21,15 +20,66 @@ class Usuario(db.Model):
             "nombre_usuario": self.nombre_usuario,
             "correo": self.correo,
             "telefono": self.telefono,
-            "avatar": self.avatar,
-            "activo": self.activo,
-            "rol_id": self.rol_id,
+            "activo": self.activo
         }
+
+    def serialize_con_rol(self):
+        rol = list(map(lambda roles: roles.serialize(), self.rol))
+        return {
+            "id": self.id,
+            "nombre_usuario": self.nombre_usuario,
+            "correo": self.correo,
+            "telefono": self.telefono,
+            "activo": self.activo,
+            "rol": rol
+        }
+
+    def guardar(self):
+        db.session.add(self)
+        db.session.commit()
+
+    def actualizar(self):
+        db.session.commit()
+    
+    def borrar(self):
+        db.session.delete(self)
+        db.session.commit()
+
+class Rol(db.Model):
+    __tablename__= "roles"
+    id = db.Column(db.Integer, primary_key=True)
+    usuario_id = db.Column(db.Integer, db.ForeignKey("usuarios.id"), nullable=False)
+    rol = db.Column(db.String(50), nullable=False)
+
+    def serialize(self):
+        return {
+            "id": self.id,
+            "rol": self.rol,
+            "usuario": {
+                "id": self.usuarios.id,
+                "nombre_usuario": self.usuarios.nombre_usuario,
+                "correo": self.usuarios.correo,
+                "telefono": self.usuarios.telefono,
+                "activo": self.usuarios.activo,
+            },
+        }
+    
+    def guardar(self):
+        db.session.add(self)
+        db.session.commit()
+
+    def actualizar(self):
+        db.session.commit()
+    
+    def borrar(self):
+        db.session.delete(self)
+        db.session.commit()
 
 class Leccion(db.Model):
     __tablename__= "lecciones"
     id = db.Column(db.Integer, primary_key=True)
     nombre = db.Column(db.String(120), nullable=False, unique=True)
+    puntuacion = db.Column(db.Integer, nullable=False)
     preguntas = db.relationship("Pregunta", backref=("lecciones"), lazy=True)
     teoria = db.relationship("Teoria", backref=("lecciones"), lazy=True)
 
@@ -37,6 +87,7 @@ class Leccion(db.Model):
         return {
             "id": self.id,
             "nombre": self.nombre,
+            "puntuacion": self.puntuacion
         }
 
     def guardar(self):
