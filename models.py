@@ -24,7 +24,7 @@ class Usuario(db.Model):
         }
 
     def serialize_con_rol(self):
-        rol = list(map(lambda roles: roles.serialize(), self.rol))
+        rol = list(map(lambda roles: roles.serialize(), [self.rol]))
         return {
             "id": self.id,
             "nombre_usuario": self.nombre_usuario,
