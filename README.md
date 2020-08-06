@@ -1,4 +1,4 @@
-# diagrama:
+# Diagrama:
 para correrlo ejecutar:
     python main.py db migrate
     python main.py db upgrade
@@ -51,15 +51,15 @@ status enum("completed","in progress")
 -
 id integer PK
 curso_id int PK FK >- Progreso_Curso.curso_id
-preguntas string FK >- Aprovacion_del_Quiz.completado
-respuestas string FK >- Aprovacion_del_Quiz.completado
+preguntas string FK >- Aprobacion_del_Quiz.completado
+respuestas string FK >- Aprobacion_del_Quiz.completado
 
 # Role
 -
 id int 
 name string
 
-# Aprovacion_del_Quiz
+# Aprobación_del_Quiz
 -
 id integer pk
 completado boolean FK >- Progreso_Curso.curso_id
