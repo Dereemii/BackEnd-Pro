@@ -227,8 +227,8 @@ class Role(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=True, unique=True)
 
-class Aprovacion_del_Quiz(db.Model):
-    __tablename__= "aprovacion_del_quiz"
+class Aprobacion_del_Quiz(db.Model):
+    __tablename__= "aprobacion_del_quiz"
     id = db.Column(db.Integer, primary_key=True)
     curso_id = db.Column(db.String(500), nullable=True)
     completado = db.Column(db.Boolean, nullable=True)
