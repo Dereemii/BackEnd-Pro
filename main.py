@@ -247,8 +247,11 @@ def agregar_respuestas_leccion():
     if not respuesta:
        return jsonify({"msg": "respuesta es requerido"}), 400
     
-    if not opcion:
-        return jsonify({"msg": "opcion es requerido"})
+    if opcion is None:
+        return jsonify({"msg": "opcion es requerido"}), 400
+    
+    if type(opcion) is not bool:
+        return jsonify({"msg": "opcion es requerido"}), 400
 
     if not pregunta_id:
         return jsonify({"msg": "pregunta_id es requerido"}), 400
