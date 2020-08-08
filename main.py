@@ -141,7 +141,7 @@ def login():
 def perfil():
     correo = get_jwt_identity()
     usuario = Usuario.query.filter_by( correo=correo ).first()
-    return jsonify(usuario.serialize()), 200
+    return jsonify(usuario.serialize_con_rol()), 200
  #   return jsonify({"msg": f"Perfil del usuario {nombre_usuario}", "usuario": usuario.serialize()}), 200
 
 # ..................... AGREGAR NOMBRE A LA LECCION ....................................... 
@@ -176,7 +176,7 @@ def agregar_nombre_leccion():
 @app.route('/obtener_nombre_leccion', methods=['GET'])
 def obtener_nombres_lecciones():
     lecciones = Leccion.query.all() 
-    lecciones = list( map(lambda leccion: leccion.serialize(), lecciones)) 
+    lecciones = list( map(lambda leccion: leccion.serialize_con_teorias_y_preguntas(), lecciones)) 
     return jsonify(lecciones), 200
 
 # ............. REGRESAR EL NOMBRE ESPECIFICO DE UNA LECCION ....................................... 
@@ -185,7 +185,7 @@ def obtener_nombres_lecciones():
 def obtener_nombre_especifico_leccion(id):
     leccion = Leccion.query.filter_by( id=id ).first()
     if leccion:
-        return jsonify(leccion.serialize()), 200
+        return jsonify(leccion.serialize_con_teorias_y_preguntas()), 200
 
 # .................... AGREGAR PREGUNTAS AL QUIZ ....................................... 
 # _____________________________________________________________________________________________________________________________________________

@@ -54,14 +54,7 @@ class Rol(db.Model):
     def serialize(self):
         return {
             "id": self.id,
-            "rol": self.rol,
-            "usuario": {
-                "id": self.usuarios.id,
-                "nombre_usuario": self.usuarios.nombre_usuario,
-                "correo": self.usuarios.correo,
-                "telefono": self.usuarios.telefono,
-                "activo": self.usuarios.activo,
-            },
+            "rol": self.rol
         }
     
     def guardar(self):
@@ -80,14 +73,25 @@ class Leccion(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     nombre = db.Column(db.String(120), nullable=False, unique=True)
     puntuacion = db.Column(db.Integer, nullable=False)
-    preguntas = db.relationship("Pregunta", backref=("lecciones"), lazy=True)
+    pregunta = db.relationship("Pregunta", backref=("lecciones"), lazy=True)
     teoria = db.relationship("Teoria", backref=("lecciones"), lazy=True)
 
     def serialize(self):
         return {
             "id": self.id,
             "nombre": self.nombre,
-            "puntuacion": self.puntuacion
+            "puntuacion": self.puntuacion,
+        }
+
+    def serialize_con_teorias_y_preguntas(self):
+        pregunta = list(map(lambda preguntas: preguntas.serialize_con_preguntas(), self.pregunta))
+        teoria = list(map(lambda teorias: teorias.serialize_para_leccion(), self.teoria))
+        return {
+            "id": self.id,
+            "nombre": self.nombre,
+            "puntuacion": self.puntuacion,
+            "preguntas": pregunta,
+            "teoria": teoria
         }
 
     def guardar(self):
@@ -106,7 +110,7 @@ class Pregunta(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     enunciado = db.Column(db.String(120), nullable=False, unique=True)
     leccion_id = db.Column(db.Integer, db.ForeignKey("lecciones.id"), nullable=False)
-    respuestas = db.relationship("Respuesta", backref="preguntas", lazy=True)
+    respuesta = db.relationship("Respuesta", backref="preguntas", lazy=True)
 
     def serialize(self):
         return {
@@ -116,6 +120,14 @@ class Pregunta(db.Model):
                 "id": self.lecciones.id,
                 "nombre": self.lecciones.nombre
             }
+        }
+
+    def serialize_con_preguntas(self):
+        respuesta = list(map(lambda respuestas: respuestas.serialize(), self.respuesta))
+        return {
+            "id": self.id,
+            "enunciado": self.enunciado,
+            "respuestas": respuesta
         }
   
     def guardar(self):
@@ -148,6 +160,14 @@ class Teoria(db.Model):
                 "id":self.lecciones.id,
                 "nombre":self.lecciones.nombre,
             }
+        }
+
+    def serialize_para_leccion(self):
+        return {
+            "titulo":self.titulo,
+            "contenido":self.contenido,
+            "nombre_icono":self.nombre_icono,
+            "multimedia":self.multimedia
         }
 
     def guardar(self):
@@ -246,3 +266,10 @@ class Respuestas_Usuario(db.Model):
     respuesta_usuario = db.Column(db.String(120), nullable=True) """
 
 
+"""             "usuario": {
+                "id": self.usuarios.id,
+                "nombre_usuario": self.usuarios.nombre_usuario,
+                "correo": self.usuarios.correo,
+                "telefono": self.usuarios.telefono,
+                "activo": self.usuarios.activo,
+            }, """
