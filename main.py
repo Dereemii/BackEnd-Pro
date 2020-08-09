@@ -240,23 +240,39 @@ def obtener_pregunta_especifica(id):
 # _____________________________________________________________________________________________________________________________________________
 @app.route('/agregar_respuestas_leccion', methods=['POST'])
 def agregar_respuestas_leccion():
-    respuesta = request.json.get("respuesta", None)
-    opcion = request.json.get("opcion", None)
+    respuesta_a = request.json.get("respuesta_a", None)
+    respuesta_b = request.json.get("respuesta_b", None)
+    respuesta_c = request.json.get("respuesta_c", None)
+    opcion_a = request.json.get("opcion_a", None)
+    opcion_b = request.json.get("opcion_b", None)
+    opcion_c = request.json.get("opcion_c", None)
     pregunta_id = request.json.get("pregunta_id", None)
 
-    if not respuesta:
-       return jsonify({"msg": "respuesta es requerido"}), 400
+    if not respuesta_a:
+       return jsonify({"msg": "respuesta A es requerido"}), 400
+    if not respuesta_b:
+       return jsonify({"msg": "respuesta B es requerido"}), 400
+    if not respuesta_c:
+       return jsonify({"msg": "respuesta C es requerido"}), 400
     
-    if opcion is None:
-        return jsonify({"msg": "opcion es requerido"}), 400
+    if opcion_a is None:
+        return jsonify({"msg": "opcion a es requerido"}), 400
+    if opcion_b is None:
+        return jsonify({"msg": "opcion b es requerido"}), 400
+    if opcion_c is None:
+        return jsonify({"msg": "opcion c es requerido"}), 400
     
-    if type(opcion) is not bool:
-        return jsonify({"msg": "opcion es requerido"}), 400
+    if type(opcion_a) is not bool:
+        return jsonify({"msg": "opcion a es requerido"}), 400
+    if type(opcion_b) is not bool:
+        return jsonify({"msg": "opcion b es requerido"}), 400
+    if type(opcion_c) is not bool:
+        return jsonify({"msg": "opcion c es requerido"}), 400
 
     if not pregunta_id:
         return jsonify({"msg": "pregunta_id es requerido"}), 400
 
-    encontrar_respuesta = Respuesta.query.filter_by(respuesta=respuesta).first()
+    encontrar_respuesta = Respuesta.query.filter_by(respuesta=respuesta_a).first()
 
     if encontrar_respuesta:
         return jsonify({"msg": "La Respuesta ya existe"}), 400
@@ -267,8 +283,12 @@ def agregar_respuestas_leccion():
         return jsonify({"msg": "pregunta_id no existe"}), 400
 
     respuestas = Respuesta()
-    respuestas.opcion = opcion
-    respuestas.respuesta = respuesta
+    respuestas.opcion_a = opcion_a
+    respuestas.opcion_b = opcion_b
+    respuestas.opcion_c = opcion_c
+    respuestas.respuesta_a = respuesta_a
+    respuestas.respuesta_b = respuesta_b
+    respuestas.respuesta_c = respuesta_c
     respuestas.pregunta_id = pregunta_id
 
     respuestas.guardar()

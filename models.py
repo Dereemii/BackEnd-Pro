@@ -185,15 +185,23 @@ class Teoria(db.Model):
 class Respuesta(db.Model):
     __tablename__= "respuestas"
     id = db.Column(db.Integer, primary_key=True)
-    respuesta = db.Column(db.String(120), nullable=False)
-    opcion = db.Column(db.Boolean, nullable=False)
+    respuesta_a = db.Column(db.String(120), nullable=False)
+    respuesta_b = db.Column(db.String(120), nullable=False)
+    respuesta_c = db.Column(db.String(120), nullable=False)
+    opcion_a = db.Column(db.Boolean, nullable=False)
+    opcion_b = db.Column(db.Boolean, nullable=False)
+    opcion_c = db.Column(db.Boolean, nullable=False)
     pregunta_id = db.Column(db.Integer, db.ForeignKey("preguntas.id"), nullable=False)
 
     def serialize(self):
         return {
             "id": self.id,
-            "respuesta": self.respuesta,
-            "opcion": self.opcion,
+            "respuesta_a": self.respuesta_a,
+            "respuesta_b": self.respuesta_b,
+            "respuesta_c": self.respuesta_c,
+            "opcion_a": self.opcion_a,
+            "opcion_b": self.opcion_b,
+            "opcion_c": self.opcion_c,
             "pregunta": {
                 "id": self.preguntas.id,
                 "enunciado": self.preguntas.enunciado,
