@@ -1,5 +1,5 @@
 import os, datetime
-from flask import Flask, jsonify, render_template, request
+from flask import Flask, jsonify, render_template, request, send_from_directory
 from flask_script import Manager
 from flask_migrate import Migrate, MigrateCommand
 from flask_cors import CORS
@@ -364,6 +364,10 @@ def fotoperfil():
 
         return jsonify({"msg": "imagen de perfil guardada satisfactoriamente"}), 200
     return jsonify({"msg": "imagen de perfil no pudo guardarse"}), 400
+
+@app.route('/fotoperfil/<filename>')
+def foto_perfil(filename):
+    return send_from_directory(app.config['UPLOAD_FOLDER']+"/imagenes", filename), 200
     
 # ................... ROLES TANTO PARA TODOS COMO PARA UNO EN ESPECIFICO  ....................................... 
 # _____________________________________________________________________________________________________________________________________________

@@ -12,7 +12,7 @@ class Usuario(db.Model):
     avatar = db.Column(db.String(100), default="sin-foto.png")
     activo = db.Column(db.Boolean, default=True)
     puntos_experiencia = db.Column(db.Integer, nullable=True, default=0)
-    rol = db.relationship("Rol", backref=("usuarios"), lazy=True, uselist=False)
+    rol = db.relationship("Rol", backref=("usuarios"), lazy=True)
 
     def serialize(self):
         return {
@@ -24,7 +24,7 @@ class Usuario(db.Model):
         }
 
     def serialize_con_rol(self):
-        rol = list(map(lambda roles: roles.serialize(), [self.rol]))
+        rol = list(map(lambda roles: roles.serialize_rol(), self.rol))
         return {
             "id": self.id,
             "nombre_usuario": self.nombre_usuario,
@@ -52,6 +52,19 @@ class Rol(db.Model):
     rol = db.Column(db.String(50), nullable=False)
 
     def serialize(self):
+        return {
+            "id": self.id,
+            "rol": self.rol,
+            "usuario": {
+                "id": self.id,
+                "nombre_usuario": self.usuarios.nombre_usuario,
+                "correo": self.usuarios.correo,
+                "telefono": self.usuarios.telefono,
+                "activo": self.usuarios.activo
+            }
+        }
+
+    def serialize_rol(self):
         return {
             "id": self.id,
             "rol": self.rol
@@ -111,6 +124,7 @@ class Pregunta(db.Model):
     enunciado = db.Column(db.String(120), nullable=False, unique=True)
     leccion_id = db.Column(db.Integer, db.ForeignKey("lecciones.id"), nullable=False)
     respuesta = db.relationship("Respuesta", backref="preguntas", lazy=True)
+    imagen = db.relationship("Imagen_pregunta", backref="preguntas", lazy=True)
 
     def serialize(self):
         return {
@@ -122,11 +136,13 @@ class Pregunta(db.Model):
             }
         }
 
-    def serialize_con_preguntas(self):
+    def serialize_con_respuestas_e_imagenes(self):
         respuesta = list(map(lambda respuestas: respuestas.serialize(), self.respuesta))
+        imagen = list(map(lambda imagenes: imagenes.serialize_para_preguntas(), self.imagen))
         return {
             "id": self.id,
             "enunciado": self.enunciado,
+            "imagenes": imagen,
             "respuestas": respuesta
         }
   
@@ -137,6 +153,43 @@ class Pregunta(db.Model):
     def actualizar(self):
         db.session.commit()
     
+    def borrar(self):
+        db.session.delete(self)
+        db.session.commit()
+
+class Imagen_pregunta(db.Model):
+    __tablename__="imagenes_preguntas"
+    id = db.Column(db.Integer, primary_key=True)
+    pregunta_id = db.Column(db.Integer,db.ForeignKey("preguntas.id"), nullable=False)
+    imagen = db.Column(db.String(120), nullable=True, default="sin-foto.png")
+
+    def serialize(self):
+        return {
+            "id":self.id,
+            "imagen":self.imagen,
+            "pregunta":{
+                "id": self.preguntas.id,
+                "enunciado": self.preguntas.enunciado,
+                "leccion": {
+                    "id": self.preguntas.lecciones.id,
+                    "nombre": self.preguntas.lecciones.nombre
+                }
+            }
+        }
+    
+    def serialize_para_preguntas(self):
+        return {
+            "id": self.id,
+            "imagen": self.imagen
+        }
+
+    def guardar(self):
+        db.session.add(self)
+        db.session.commit()
+
+    def actualizar(self):
+        db.session.commit()
+
     def borrar(self):
         db.session.delete(self)
         db.session.commit()
