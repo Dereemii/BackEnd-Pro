@@ -31,6 +31,8 @@ class Usuario(db.Model):
             "correo": self.correo,
             "telefono": self.telefono,
             "activo": self.activo,
+            "puntos_experiencia": self.puntos_experiencia,
+            "avatar": self.avatar,
             "rol": rol
         }
 
@@ -97,7 +99,7 @@ class Leccion(db.Model):
         }
 
     def serialize_con_teorias_y_preguntas(self):
-        pregunta = list(map(lambda preguntas: preguntas.serialize_con_preguntas(), self.pregunta))
+        pregunta = list(map(lambda preguntas: preguntas.serialize_con_respuestas_e_imagenes(), self.pregunta))
         teoria = list(map(lambda teorias: teorias.serialize_para_leccion(), self.teoria))
         return {
             "id": self.id,

@@ -6,7 +6,7 @@ from flask_cors import CORS
 from flask_bcrypt import Bcrypt
 from flask_jwt_extended import JWTManager, get_jwt_identity, jwt_required, create_access_token
 from werkzeug.utils import secure_filename
-from models import db, Usuario, Pregunta, Respuesta, Leccion, Teoria, Rol
+from models import db, Usuario, Pregunta, Respuesta, Leccion, Teoria, Rol, Imagen_pregunta
 from libs.utils import allowed_file
 
 UPLOAD_FOLDER = "static"
@@ -146,7 +146,7 @@ def perfil():
 
 # ..................... AGREGAR NOMBRE A LA LECCION ....................................... 
 # _____________________________________________________________________________________________________________________________________________
-@app.route('/agregar_nombre_leccion', methods=['POST'])
+@app.route('/leccion', methods=['POST'])
 def agregar_nombre_leccion():
     nombre = request.json.get("nombre", None)
     puntuacion = request.json.get("puntuacion", None)
@@ -173,7 +173,7 @@ def agregar_nombre_leccion():
 
 # ................... REGRESAR EL NOMBRE DE LA lECCION ....................................... 
 # _____________________________________________________________________________________________________________________________________________
-@app.route('/obtener_nombre_leccion', methods=['GET'])
+@app.route('/leccion', methods=['GET'])
 def obtener_nombres_lecciones():
     lecciones = Leccion.query.all() 
     lecciones = list( map(lambda leccion: leccion.serialize_con_teorias_y_preguntas(), lecciones)) 
@@ -181,15 +181,38 @@ def obtener_nombres_lecciones():
 
 # ............. REGRESAR EL NOMBRE ESPECIFICO DE UNA LECCION ....................................... 
 # _____________________________________________________________________________________________________________________________________________
-@app.route('/obtener_nombre_leccion/<int:id>', methods=['GET'])
+@app.route('/leccion/<int:id>', methods=['GET', 'DELETE', 'PUT'])
 def obtener_nombre_especifico_leccion(id):
-    leccion = Leccion.query.filter_by( id=id ).first()
-    if leccion:
-        return jsonify(leccion.serialize_con_teorias_y_preguntas()), 200
+
+#------------------------------ METODO GET ------------------------------------------------
+
+    if request.method == "GET":
+        leccion = Leccion.query.filter_by( id=id ).first()
+        if leccion:
+            return jsonify(leccion.serialize_con_teorias_y_preguntas()), 200
+        return jsonify({"msg":"Nose ha encontrado ninguna leccion, porfavor cree una"})
+
+#------------------------------ METODO PUT ------------------------------------------------
+
+    if request.method == "PUT":
+        lecciones = Leccion.query.get(id)
+        lecciones.nombre = request.json.get("nombre", "")
+        lecciones.puntuacion = request.json.get("puntuacion", "")
+
+        lecciones.actualizar()
+        return jsonify({'msg': "Actualizado satisfactoriamente"}), 205
+
+#------------------------------ METODO DELETE -------------------------------------------------
+
+    if request.method == "DELETE":
+        lecciones = Leccion.query.get(id)
+
+        lecciones.borrar()
+        return jsonify({"msg": "Borrado Satisfactoriamente"}), 205
 
 # .................... AGREGAR PREGUNTAS AL QUIZ ....................................... 
 # _____________________________________________________________________________________________________________________________________________
-@app.route('/agregar_preguntas', methods=['POST'])
+@app.route('/preguntas', methods=['POST'])
 def agregar_preguntas():
     enunciado = request.json.get("enunciado", None)
     leccion_id = request.json.get("leccion_id", None)
@@ -221,24 +244,47 @@ def agregar_preguntas():
     
 # .................... OBTENER PREGUNTAS DE LA LECCION  ....................................... 
 # _____________________________________________________________________________________________________________________________________________
-@app.route('/obtener_pregunta', methods=['GET'])
+@app.route('/preguntas', methods=['GET'])
 def obtener_pregunta():
     preguntas = Pregunta.query.all() 
-    preguntas = list( map(lambda pregunta: pregunta.serialize(), preguntas)) 
-    return jsonify(preguntas), 201
+    preguntas = list( map(lambda pregunta: pregunta.serialize_con_respuestas_e_imagenes(), preguntas)) 
+    if preguntas:
+        return jsonify(preguntas), 201
+    return jsonify({"msg":"No se han encontrado preguntas, porfavor cree una"}), 401
 
 # .................... OBTENER PREGUNTA ESPECIFICA DE LA LECCION  ....................................... 
 # _____________________________________________________________________________________________________________________________________________
-@app.route('/obtener_pregunta/<int:id>', methods=['GET'])
+@app.route('/preguntas/<int:id>', methods=['GET', 'PUT', 'DELETE'])
 def obtener_pregunta_especifica(id):
-    preguntas = Pregunta.query.filter_by(id=id).first()
-    if preguntas:
-        return jsonify(preguntas.serialize()), 201
+    
+#------------------------------ METODO GET ------------------------------------------------
+
+    if request.method == "GET":
+        preguntas = Pregunta.query.filter_by(id=id).first()
+        if preguntas:
+            return jsonify(preguntas.serialize()), 201
+
+#------------------------------ METODO PUT ------------------------------------------------
+
+    if request.method == "PUT":
+        preguntas = Pregunta.query.get(id)
+        preguntas.enunciado = request.json.get("enunciado", "")
+
+        preguntas.actualizar()
+        return jsonify({'msg': "Actualizado satisfactoriamente"}), 205
+
+#------------------------------ METODO DELETE -------------------------------------------------
+
+    if request.method == "DELETE":
+        preguntas = Pregunta.query.get(id)
+
+        preguntas.borrar()
+        return jsonify({"msg": "Borrado Satisfactoriamente"}), 205
 
 
 # ..................... AGREGAR RESPUESTAS A LA LECCION  ....................................... 
 # _____________________________________________________________________________________________________________________________________________
-@app.route('/agregar_respuestas_leccion', methods=['POST'])
+@app.route('/respuestas', methods=['POST'])
 def agregar_respuestas_leccion():
     respuesta_a = request.json.get("respuesta_a", None)
     respuesta_b = request.json.get("respuesta_b", None)
@@ -272,10 +318,20 @@ def agregar_respuestas_leccion():
     if not pregunta_id:
         return jsonify({"msg": "pregunta_id es requerido"}), 400
 
-    encontrar_respuesta = Respuesta.query.filter_by(respuesta=respuesta_a).first()
+    encontrar_respuesta_a = Respuesta.query.filter_by(respuesta_a=respuesta_a).first()
+    
+    if encontrar_respuesta_a:
+        return jsonify({"msg": "La Respuesta A ya existe"}), 400
 
-    if encontrar_respuesta:
-        return jsonify({"msg": "La Respuesta ya existe"}), 400
+    encontrar_respuesta_b = Respuesta.query.filter_by(respuesta_b=respuesta_b).first()
+    
+    if encontrar_respuesta_b:
+        return jsonify({"msg": "La Respuesta B ya existe"}), 400
+    
+    encontrar_respuesta_c = Respuesta.query.filter_by(respuesta_c=respuesta_c).first()
+
+    if encontrar_respuesta_c:
+        return jsonify({"msg": "La Respuesta C ya existe"}), 400
 
     encontrar_pregunta_id = Pregunta.query.filter_by(id=pregunta_id).first()
 
@@ -297,23 +353,49 @@ def agregar_respuestas_leccion():
     
 # .......................... OBTENER RESPUESTAS ....................................... 
 # _____________________________________________________________________________________________________________________________________________
-@app.route('/obtener_respuesta', methods=['GET'])
+@app.route('/respuestas', methods=['GET'])
 def obtener_respuesta():
     respuestas = Respuesta.query.all() 
     respuestas = list( map(lambda respuesta: respuesta.serialize(), respuestas)) 
-    return jsonify(respuestas), 201
+    if respuestas:
+        return jsonify(respuestas), 201
+    return jsonify({"msg": "No se ha encontrado ninguna respuesta, porfavor cree una"}), 401
 
 # .......................... OBTENER UNA RESPUESTA ....................................... 
 # _____________________________________________________________________________________________________________________________________________
-@app.route('/obtener_respuesta/<int:id>', methods=['GET'])
+@app.route('/respuestas/<int:id>', methods=['GET', 'PUT', 'DELETE'])
 def obtener_respuesta_especifica(id):
-    respuestas = Respuesta.query.filter_by( id=id ).first()
-    if respuestas:
-        return jsonify(respuestas.serialize()), 201
 
+#------------------------------ METODO GET ------------------------------------------------
+    if request.method == "GET":
+        respuestas = Respuesta.query.filter_by( id=id ).first()
+        if respuestas:
+            return jsonify(respuestas.serialize()), 201
+
+#------------------------------ METODO PUT ------------------------------------------------
+
+    elif request.method == "PUT":
+        respuestas = Respuesta.query.get(id)
+        respuestas.respuesta_a = request.json.get("respuesta_a", "")
+        respuestas.respuesta_b = request.json.get("respuesta_b", "")
+        respuestas.respuesta_c = request.json.get("respuesta_c", "")
+        respuestas.opcion_a = request.json.get("opcion_a", "")
+        respuestas.opcion_b = request.json.get("opcion_b", "")
+        respuestas.opcion_c = request.json.get("opcion_c", "")
+        
+        respuestas.actualizar()
+        return jsonify({'msg': "Actualizado satisfactoriamente"}), 201
+
+#------------------------------ METODO DELETE -------------------------------------------------
+
+    elif request.method == "DELETE":
+        respuestas = Respuesta.query.get(id)
+
+        respuestas.borrar()
+        return jsonify({"msg": "Borrado Satisfactoriamente"}), 201
 # ..................... AGREGAR TEORIA DE LA LECCION  ....................................... 
 # _____________________________________________________________________________________________________________________________________________
-@app.route('/agregar_teoria', methods=['POST'])
+@app.route('/teoria', methods=['POST'])
 def agregar_teoria():
     titulo = request.json.get("titulo", None)
     contenido = request.json.get("contenido", None)
@@ -344,29 +426,57 @@ def agregar_teoria():
 
 # ................... REGRESAR LAS TEORIAS DE LAS lECCIONES   ....................................... 
 # _____________________________________________________________________________________________________________________________________________
-@app.route('/obtener_teoria', methods=['GET'])
+@app.route('/teoria', methods=['GET'])
 def obtener_teorias():
     teorias = Teoria.query.all() 
-    teorias = list( map(lambda teoria: teoria.serialize(), teorias)) 
-    return jsonify(teorias), 201
+    teorias = list( map(lambda teoria: teoria.serialize(), teorias))
+    if teorias:
+        return jsonify(teorias), 201
+    return jsonify({"msg":"No se ha encontrado ninguna teoria, porfavor cree una"}), 401
 
 # ................... REGRESAR LAS TEORIAS DE LAS lECCIONES   ....................................... 
 # _____________________________________________________________________________________________________________________________________________
-@app.route('/obtener_teoria/<int:id>', methods=['GET'])
+@app.route('/teoria/<int:id>', methods=['GET', 'PUT', 'DELETE'])
 def obtener_teoria_especifica(id):
-    teorias = Teoria.query.filter_by( id=id ).first()
-    if teorias:
-        return jsonify(teorias.serialize()), 201
+
+#----------------------------- METODO GET --------------------------------------------------
+
+    if request.method == "GET":
+        teorias = Teoria.query.filter_by( id=id ).first()
+        if teorias:
+            return jsonify(teorias.serialize()), 201
+        return jsonify({'msg': 'Esta teoria no existe'}), 401
+
+#------------------------------ METODO PUT ------------------------------------------------
+
+    elif request.method == "PUT":
+        teorias = Teoria.query.get(id)
+        teorias.titulo = request.json.get("titulo", "")
+        teorias.contenido = request.json.get("contenido", "")
+        teorias.nombre_icono = request.json.get("nombre_icono", "")
+        teorias.multimedia = request.json.get("multimedia", "")
+
+        teorias.actualizar()
+        return jsonify({"msg": "Actualizado satisfactoriamente"}), 205
+
+#------------------------------ METODO DELETE -------------------------------------------------
+
+    elif request.method == "DELETE":
+        teorias = Teoria.query.get(id)
+
+        teorias.borrar()
+        return jsonify({"msg": "Borrado Satisfactoriamente"}), 205
 
 # ................... GUARDAR IMAGEN DE PERFIL   ....................................... 
 # _____________________________________________________________________________________________________________________________________________
 @app.route('/fotoperfil', methods=["POST"])
 @jwt_required
 def fotoperfil():
+    file = request.files['avatar']
+    
     if 'avatar' not in request.files:
         return jsonify({"msg": "Avatar es requerido"}), 401
-
-    file = request.files['avatar']
+    
     if file.filename == '':
         return jsonify({"msg": "No seleccionaste el archivo"}), 401
 
@@ -392,7 +502,7 @@ def foto_perfil(filename):
 # ................... ROLES TANTO PARA TODOS COMO PARA UNO EN ESPECIFICO  ....................................... 
 # _____________________________________________________________________________________________________________________________________________
 @app.route('/rol', methods=['GET', 'POST'])
-@app.route('/rol/<int:id>', methods=['GET', 'POST', 'DELETE', 'PUT'])
+@app.route('/rol/<int:id>', methods=['GET', 'DELETE', 'PUT'])
 def todos_los_roles(id=None):
 
 #----------------------------- METODO GET --------------------------------------------------
@@ -435,5 +545,161 @@ def todos_los_roles(id=None):
         rol.guardar()
         return jsonify(rol.serialize()), 205
 
+#............................ RECIBIR IMAGENES DE LA TEORIA ..........................
+#________________________________________________________________________________________________
+@app.route("/teoria-imagenes/<int:id>", methods=["POST"])
+@jwt_required
+def teoria_imagenes(id):
+    if request.method == "POST":
+        if "multimedia" not in request.files:
+            return jsonify({"msg":"Multimedia es requerido"})
+
+        teoria = Teoria.query.get(id)
+        file = request.files['multimedia']
+        
+        if file.filename == '':
+            return jsonify({"msg": "No has seleccionado el archivo"}), 400
+
+        if file and allowed_file(file.filename, ALLOWED_EXTENSIONS_IMGS):
+            filename = secure_filename(file.filename)
+            filename = "teoria_" + str(teoria.id) + "_" + filename
+            file.save(os.path.join(app.config['UPLOAD_FOLDER']+"/imagenes", filename))
+       
+        teoria.multimedia = filename
+        teoria.actualizar()
+        return jsonify('Actualizado correctamente'), 200
+    return jsonify({"msg": "imagen de perfil no pudo guardarse"}), 400
+
+@app.route("/teoria-imagenes/<filename>")
+def teoria_imagenes_buscar(filename):
+    return send_from_directory(app.config['UPLOAD_FOLDER']+"/imagenes", filename), 200
+
+
+#................................. IMAGENES DE PREGUNTAS ..............................
+#______________________________________________________________________________________
+@app.route("/preguntas-imagenes", methods=["GET"])
+@app.route("/preguntas-imagenes/<int:id>", methods=["POST", "GET", "PUT", "DELETE"])
+@jwt_required
+def preguntas_imagenes(id=None):
+#------------------------------ METODO POST ------------------------------------------------
+
+    if request.method == "POST":
+        if "imagen" not in request.files:
+            return jsonify({"msg":"Imagen es requerido"})
+
+        imagen_pregunta = Imagen_pregunta()
+        file = request.files['imagen']
+
+        if file.filename == '':
+            return jsonify({"msg": "No has seleccionado el archivo"}), 400
+
+        if file and allowed_file(file.filename, ALLOWED_EXTENSIONS_IMGS):
+            filename = secure_filename(file.filename)
+            filename = "pregunta_" + str(id) + "_" + filename
+            file.save(os.path.join(app.config['UPLOAD_FOLDER']+"/imagenes", filename))
+       
+        imagen_pregunta.imagen = filename
+        imagen_pregunta.pregunta_id = request.form.get("pregunta_id", "")
+        imagen_pregunta.guardar()
+        return jsonify('Guardada correctamente'), 200
+
+#------------------------------ METODO PUT ------------------------------------------------
+
+    elif request.method == "PUT":
+        if "imagen" not in request.files:
+            return jsonify({"msg":"Imagen es requerido"})
+
+        imagen_pregunta = Imagen_pregunta.query.get(id)
+        file = request.files['imagen']
+
+        if file.filename == '':
+            return jsonify({"msg": "No has seleccionado el arcihvo"}), 400
+
+        if file and allowed_file(file.filename, ALLOWED_EXTENSIONS_IMGS):
+            filename = secure_filename(file.filename)
+            filename = "pregunta_" + str(imagen_pregunta.id) + "_" + filename
+            file.save(os.path.join(app.config['UPLOAD_FOLDER']+"/imagenes", filename))
+       
+        imagen_pregunta.imagen = filename
+        imagen_pregunta.pregunta_id = request.form.get("pregunta_id", "")
+        imagen_pregunta.actualizar()
+        return jsonify('Actualizado correctamente'), 200 
+
+#------------------------------ METODO DELETE ------------------------------------------------
+
+    elif request.method == "DELETE":
+        imagen_pregunta = Imagen_pregunta.query.get(id)
+
+        imagen_pregunta.borrar()
+        return jsonify({"msg":"Borrado Satisfactoriamente"}), 201
+
+#------------------------------ METODO GET ------------------------------------------------
+
+    elif request.method == "GET":
+        if id is not None:
+            imagen = Imagen_pregunta.query.get(id)
+            if imagen:
+                return jsonify(imagen.serialize()), 205
+            return jsonify({"msg": "Esta imagen No existe"}), 405
+
+        else:
+            imagen = Imagen_pregunta.query.all()
+            imagen = list(map(lambda imagenes: imagenes.serialize(), imagen))
+            return jsonify(imagen), 205
+
+@app.route("/preguntas-imagenes/<filename>")
+def buscar_imagen_pregunta(filename):
+    return send_from_directory(app.config['UPLOAD_FOLDER']+"/imagenes", filename), 200
+
+# .......................... CAMBIAR PUNTOS DE EXPERIENCIA   ............................
+# _____________________________________________________________________________________________________________________________________________
+@app.route("/experiencia", methods=["PUT"])
+@jwt_required
+def experiencia():
+    experiencia = request.json.get("experiencia", None)
+
+    if not experiencia:
+        return jsonify({"msg": "Experiencia es requerido"})
+
+    correo = get_jwt_identity()
+    usuario = Usuario.query.filter_by( correo=correo ).first()
+
+    usuario.puntos_experiencia = experiencia
+
+    usuario.actualizar()
+    return jsonify({"msg": "Actualizado satisfactoriamente"}), 205
+
 if __name__ == "__main__":
     manager.run()
+
+""" 
+#------------------------------ METODO PUT ------------------------------------------------
+
+    if request.method == "PUT":
+         = .query.get(id)
+         = request.json.get("", "")
+         = request.json.get("", "")
+         = request.json.get("", "")
+         = request.json.get("", "")
+         = request.json.get("", "")
+
+        .actualizar()
+        return jsonify({'msg': "Actualizado satisfactoriamente"}), 205
+
+#------------------------------ METODO DELETE -------------------------------------------------
+
+    if request.method == "DELETE":
+         = .query.get(id)
+
+         .borrar()
+        return jsonify({"msg": "Borrado Satisfactoriamente"}), 205
+         """
+""" 
+    resp_a = Respuesta.query.filter_by(respuesta_a=respuesta_a).first()
+    
+    resp_b = Respuesta.query.filter_by(respuesta_b=respuesta_b).first()
+
+    resp_c = Respuesta.query.filter_by(respuesta_c=respuesta_c).first()
+
+    if resp_a or resp_b or resp_c:
+        return jsonify({"msg": "Esta Respuesta ya existe"}), 400 """
