@@ -592,12 +592,19 @@ def preguntas_imagenes(id=None):
 
         if file.filename == '':
             return jsonify({"msg": "No has seleccionado el archivo"}), 400
+        
+        encontrar_imagen = Imagen_pregunta.query.filter_by(id=id).first()
+
+        if encontrar_imagen is not None:
+            return jsonify({"msg": "Ese Id ya existe, por favor ingre en la url el id nuevo"}), 400
 
         if file and allowed_file(file.filename, ALLOWED_EXTENSIONS_IMGS):
             filename = secure_filename(file.filename)
             filename = "pregunta_" + str(id) + "_" + filename
             file.save(os.path.join(app.config['UPLOAD_FOLDER']+"/imagenes", filename))
        
+
+
         imagen_pregunta.imagen = filename
         imagen_pregunta.pregunta_id = request.form.get("pregunta_id", "")
         imagen_pregunta.guardar()
