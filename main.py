@@ -57,10 +57,10 @@ def usuarios(id=None):
             usuario = Usuario.query.get(id)
             if not usuario:
                 return jsonify({"msj": "Usuario no encontrado"}), 404
-            return jsonify(usuario.serialize()), 200
+            return jsonify(usuario.serialize_con_rol()), 200
         else:
             usuarios = Usuario.query.all()
-            usuarios = list(map(lambda usuario: usuario.serialize(), usuarios))
+            usuarios = list(map(lambda usuario: usuario.serialize_con_rol(), usuarios))
             return jsonify(usuarios), 200
 
 # .......................... REGISTRO ....................................... 
@@ -129,7 +129,7 @@ def login():
 
     datos = {
         "access_token": create_access_token(identity=usuario.correo, expires_delta=expires),
-        "usuario": usuario.serialize() 
+        "usuario": usuario.serialize_con_rol() 
     }
 
     return jsonify({"succes": "Log In exitoso!", "datos": datos}), 200
@@ -492,7 +492,7 @@ def fotoperfil():
         usuario.avatar = filename
         usuario.actualizar()
 
-        return jsonify({"msg": "imagen de perfil guardada satisfactoriamente"}), 200
+        return jsonify({"msg": "imagen de perfil guardada satisfactoriamente", "usuario": usuario.serialize_con_rol()}), 200
     return jsonify({"msg": "imagen de perfil no pudo guardarse"}), 400
 
 @app.route('/fotoperfil/<filename>')
