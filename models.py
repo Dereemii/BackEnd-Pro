@@ -243,9 +243,9 @@ class Respuesta(db.Model):
     respuesta_a = db.Column(db.String(120), nullable=False)
     respuesta_b = db.Column(db.String(120), nullable=False)
     respuesta_c = db.Column(db.String(120), nullable=False)
-    opcion_a = db.Column(db.Boolean, nullable=False)
-    opcion_b = db.Column(db.Boolean, nullable=False)
-    opcion_c = db.Column(db.Boolean, nullable=False)
+    opcion_a = db.Column(db.String(15), nullable=False)
+    opcion_b = db.Column(db.String(15), nullable=False)
+    opcion_c = db.Column(db.String(15), nullable=False)
     pregunta_id = db.Column(db.Integer, db.ForeignKey("preguntas.id"), nullable=False)
 
     def serialize(self):
