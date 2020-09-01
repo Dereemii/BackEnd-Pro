@@ -62,6 +62,13 @@ def usuarios(id=None):
             usuarios = Usuario.query.all()
             usuarios = list(map(lambda usuario: usuario.serialize(), usuarios))
             return jsonify(usuarios), 200
+    
+    if request.method == 'PUT':
+        if id is not None:
+            usuario = Usuario.query.get(id)
+            if not usuario:
+                return jsonify({"msj": "Usuario no encontrado"}), 404
+            return jsonify(usuario.serialize()), 200
 
 # .......................... REGISTRO ....................................... 
 # _____________________________________________________________________________________________________________________________________________    
@@ -89,9 +96,13 @@ def register():
         return jsonify({"msg": "Se requiere un rol"}), 400 """
 
     usuario = Usuario.query.filter_by(nombre_usuario=nombre_usuario).first()
+    correo_usuario = Usuario.query.filter_by(correo=correo).first()
 
     if usuario:
         return jsonify({"msg": "Nombre de usuario ya existe"}), 400
+    
+    if correo_usuario:
+        return jsonify({"msg": "El correo ya esta registrado"}), 400
 
     usuario = Usuario()
     usuario.nombre_usuario = nombre_usuario
@@ -102,7 +113,7 @@ def register():
 
     usuario.guardar()
 
-    return jsonify({"msg": "registro exitoso, por favor hacer login"}), 201
+    return jsonify({"success": "registro exitoso, por favor hacer login "}), 201
 
 # .......................... LOGIN ....................................... 
 # _____________________________________________________________________________________________________________________________________________
@@ -169,7 +180,11 @@ def agregar_nombre_leccion():
     
     leccion.guardar()
 
-    return jsonify(leccion.serialize()), 201
+    datos = {
+        "leccion": leccion.serialize()
+    }
+
+    return jsonify({"success": "nombre de leccion agregada", "datos": datos}), 201
 
 # ................... REGRESAR EL NOMBRE DE LA lECCION ....................................... 
 # _____________________________________________________________________________________________________________________________________________
@@ -239,8 +254,12 @@ def agregar_preguntas():
     preguntas.leccion_id = leccion_id
 
     preguntas.guardar()
+
+    datos = {
+        "preguntas": preguntas.serialize()
+    }
             
-    return jsonify(preguntas.serialize()), 201
+    return jsonify({"success": "pregunta agregada", "datos": datos}), 201
     
 # .................... OBTENER PREGUNTAS DE LA LECCION  ....................................... 
 # _____________________________________________________________________________________________________________________________________________
@@ -301,19 +320,13 @@ def agregar_respuestas_leccion():
     if not respuesta_c:
        return jsonify({"msg": "respuesta C es requerido"}), 400
     
-    if opcion_a is None:
+    if not opcion_a:
         return jsonify({"msg": "opcion a es requerido"}), 400
-    if opcion_b is None:
+    if not opcion_b:
         return jsonify({"msg": "opcion b es requerido"}), 400
-    if opcion_c is None:
+    if not opcion_c:
         return jsonify({"msg": "opcion c es requerido"}), 400
     
-    if type(opcion_a) is not bool:
-        return jsonify({"msg": "opcion a es requerido"}), 400
-    if type(opcion_b) is not bool:
-        return jsonify({"msg": "opcion b es requerido"}), 400
-    if type(opcion_c) is not bool:
-        return jsonify({"msg": "opcion c es requerido"}), 400
 
     if not pregunta_id:
         return jsonify({"msg": "pregunta_id es requerido"}), 400
@@ -349,7 +362,11 @@ def agregar_respuestas_leccion():
 
     respuestas.guardar()
 
-    return jsonify(respuestas.serialize()), 201
+    datos = {
+        "respuestas": respuestas.serialize()
+    }
+
+    return jsonify({"success": "Respuestas agregadas", "datos": datos}), 201
     
 # .......................... OBTENER RESPUESTAS ....................................... 
 # _____________________________________________________________________________________________________________________________________________
