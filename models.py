@@ -9,7 +9,7 @@ class Usuario(db.Model):
     correo = db.Column(db.String(120), nullable=False, unique=True)
     clave = db.Column(db.String(120), nullable=False)
     telefono = db.Column(db.Integer, nullable=True, unique=True)
-    avatar = db.Column(db.String(100), default="sin-foto.png")
+    avatar = db.Column(db.String(100), default="imagen-perfil-sin-foto.png")
     activo = db.Column(db.Boolean, default=True)
     puntos_experiencia = db.Column(db.Integer, nullable=True, default=0)
     rol = db.relationship("Rol", backref=("usuarios"), lazy=True)
@@ -243,9 +243,9 @@ class Respuesta(db.Model):
     respuesta_a = db.Column(db.String(120), nullable=False)
     respuesta_b = db.Column(db.String(120), nullable=False)
     respuesta_c = db.Column(db.String(120), nullable=False)
-    opcion_a = db.Column(db.String(120), nullable=False)
-    opcion_b = db.Column(db.String(120), nullable=False)
-    opcion_c = db.Column(db.String(120), nullable=False)
+    opcion_a = db.Column(db.String(15), nullable=False)
+    opcion_b = db.Column(db.String(15), nullable=False)
+    opcion_c = db.Column(db.String(15), nullable=False)
     pregunta_id = db.Column(db.Integer, db.ForeignKey("preguntas.id"), nullable=False)
 
     def serialize(self):

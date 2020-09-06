@@ -6,7 +6,7 @@ from flask_cors import CORS
 from flask_bcrypt import Bcrypt
 from flask_jwt_extended import JWTManager, get_jwt_identity, jwt_required, create_access_token
 from werkzeug.utils import secure_filename
-from models import db, Usuario, Pregunta, Respuesta, Leccion, Teoria, Rol, Imagen_pregunta
+from models import db, Usuario, Rol, Pregunta, Respuesta, Leccion, Teoria, Imagen_pregunta
 from libs.utils import allowed_file
 
 UPLOAD_FOLDER = "static"
@@ -57,18 +57,11 @@ def usuarios(id=None):
             usuario = Usuario.query.get(id)
             if not usuario:
                 return jsonify({"msj": "Usuario no encontrado"}), 404
-            return jsonify(usuario.serialize()), 200
+            return jsonify(usuario.serialize_con_rol()), 200
         else:
             usuarios = Usuario.query.all()
-            usuarios = list(map(lambda usuario: usuario.serialize(), usuarios))
+            usuarios = list(map(lambda usuario: usuario.serialize_con_rol(), usuarios))
             return jsonify(usuarios), 200
-    
-    if request.method == 'PUT':
-        if id is not None:
-            usuario = Usuario.query.get(id)
-            if not usuario:
-                return jsonify({"msj": "Usuario no encontrado"}), 404
-            return jsonify(usuario.serialize()), 200
 
 # .......................... REGISTRO ....................................... 
 # _____________________________________________________________________________________________________________________________________________    
@@ -96,13 +89,9 @@ def register():
         return jsonify({"msg": "Se requiere un rol"}), 400 """
 
     usuario = Usuario.query.filter_by(nombre_usuario=nombre_usuario).first()
-    correo_usuario = Usuario.query.filter_by(correo=correo).first()
 
     if usuario:
         return jsonify({"msg": "Nombre de usuario ya existe"}), 400
-    
-    if correo_usuario:
-        return jsonify({"msg": "El correo ya esta registrado"}), 400
 
     usuario = Usuario()
     usuario.nombre_usuario = nombre_usuario
@@ -113,7 +102,8 @@ def register():
 
     usuario.guardar()
 
-    return jsonify({"success": "registro exitoso, por favor hacer login "}), 201
+    return jsonify({"success": "Registro exitoso, por favor hacer login "}), 201
+
 
 # .......................... LOGIN ....................................... 
 # _____________________________________________________________________________________________________________________________________________
@@ -140,10 +130,34 @@ def login():
 
     datos = {
         "access_token": create_access_token(identity=usuario.correo, expires_delta=expires),
-        "usuario": usuario.serialize() 
+        "usuario": usuario.serialize_con_rol() 
     }
 
-    return jsonify({"succes": "Log In exitoso!", "datos": datos}), 200
+    return jsonify({"success": "Log In exitoso!", "datos": datos}), 200
+
+@app.route('/usuarios/<int:id>', methods=['GET', 'PUT', 'DELETE'])
+def usuario(id):
+#------------------------------ METODO PUT ------------------------------------------------
+
+    if request.method == 'PUT':
+        usuarios = Usuario.query.get(id)
+        usuarios.nombre_usuario = request.json.get("nombre_usuario", "")
+        usuarios.correo = request.json.get("correo", "")
+        usuarios.telefono = request.json.get("telefono", "")
+        usuarios.rol = request.json.get("rol", "")
+
+        usuario.actualizar()
+        return jsonify({"success": "Usuario actualizado"}), 205
+
+#------------------------------ METODO DELETE -------------------------------------------------
+
+    if request.method == "DELETE":
+        usuarios = Usuario.query.get(id)
+
+        usuarios.borrar()
+        return jsonify({"msg": "Usuario eliminado"}), 205
+        
+
 
 # .......................... PERFIL ....................................... 
 # _____________________________________________________________________________________________________________________________________________
@@ -509,7 +523,7 @@ def fotoperfil():
         usuario.avatar = filename
         usuario.actualizar()
 
-        return jsonify({"msg": "imagen de perfil guardada satisfactoriamente"}), 200
+        return jsonify({"success": "imagen de perfil guardada satisfactoriamente"}), 200
     return jsonify({"msg": "imagen de perfil no pudo guardarse"}), 400
 
 @app.route('/fotoperfil/<filename>')
